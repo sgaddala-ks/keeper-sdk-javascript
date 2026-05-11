@@ -1,0 +1,26 @@
+{
+  "name": "@keeper-security/keeper-webconsole-api",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Express API for keeper-webconsole: POST /api/cli { line } -> KeeperSdk (KeeperVault).",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "dev": "tsx watch server.ts"
+  },
+  "dependencies": {
+    "@keeper-security/keeper-sdk-javascript": "file:../KeeperSdk",
+    "cors": "^2.8.6",
+    "express": "^4.21.0",
+    "express-rate-limit": "^8.5.1",
+    "helmet": "^8.1.0"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.2",
+    "typescript": "~5.7.2"
+  }
+}

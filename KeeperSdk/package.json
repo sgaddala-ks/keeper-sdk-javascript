@@ -2,7 +2,8 @@
     "name": "@keeper-security/keeper-sdk-javascript",
     "version": "1.0.0",
     "description": "High-level wrapper for Keeper Security JavaScript SDK",
-    "main": "src/index.ts",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
     "scripts": {
         "build": "tsc",
         "clean": "rm -rf dist",
@@ -15,8 +16,7 @@
         "prepublishOnly": "npm run build"
     },
     "dependencies": {
-        "@keeper-security/keeperapi": "17.1.0",
-        "ts-node": "^10.7.0",
+        "@keeper-security/keeperapi": "file:../keeperapi",
         "typescript": "^4.6.3"
     },
     "devDependencies": {

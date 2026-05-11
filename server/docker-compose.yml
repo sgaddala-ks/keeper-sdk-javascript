@@ -1,0 +1,20 @@
+# Repository root: docker compose -f server/docker-compose.yml up --build
+services:
+  keeper-webconsole-api:
+    build:
+      context: ..
+      dockerfile: server/Dockerfile
+    ports:
+      - "3042:3042"
+    environment:
+      NODE_ENV: production
+      CLI_DATA_DIR: /data
+      KEEPER_CONFIG_DIR: /data/.keeper
+      KEEPER_USERNAME: "${KEEPER_USERNAME:-}"
+      KEEPER_PASSWORD: "${KEEPER_PASSWORD:-}"
+      KEEPER_HOST: "${KEEPER_HOST:-}"
+    volumes:
+      - keeper-webconsole-api-data:/data
+
+volumes:
+  keeper-webconsole-api-data:

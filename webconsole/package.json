@@ -1,0 +1,41 @@
+{
+  "name": "keeper-webconsole",
+  "version": "1.0.0",
+  "description": "Framework-agnostic <web-console> custom element (terminal UI only). Requires a separate backend that implements POST /api/cli { line }.",
+  "type": "module",
+  "main": "./dist/keeper-webconsole.es.js",
+  "module": "./dist/keeper-webconsole.es.js",
+  "types": "./web-console.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/keeper-webconsole.es.js",
+      "require": "./dist/keeper-webconsole.umd.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "web-console.d.ts"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@xterm/addon-fit": "^0.11.0",
+    "@xterm/xterm": "^6.0.0"
+  },
+  "devDependencies": {
+    "typescript": "~5.7.2",
+    "vite": "^6.0.3"
+  },
+  "peerDependencies": {},
+  "keywords": [
+    "web-components",
+    "custom-elements",
+    "xterm",
+    "keeper"
+  ],
+  "license": "ISC"
+}

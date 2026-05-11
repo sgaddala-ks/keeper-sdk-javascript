@@ -28,10 +28,12 @@
         "types:ci": "tsc"
     },
     "dependencies": {
-        "@keeper-security/keeperapi": "17.1.0",
-        "@types/node": "^20.9.1",
+        "@keeper-security/keeperapi": "file:../../keeperapi",
         "ts-node": "^10.7.0",
         "tsconfig-paths": "^4.2.0",
         "typescript": "^4.6.3"
+    },
+    "devDependencies": {
+        "@types/node": "^25.6.2"
     }
 }

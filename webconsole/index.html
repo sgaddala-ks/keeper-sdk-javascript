@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>keeper-webconsole dev</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        max-width: 900px;
+        margin: 24px auto;
+        padding: 0 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Web console (dev)</h1>
+    <p>
+      Point <code>api-base</code> at any service that implements
+      <code>POST …/api/cli</code> with body <code>{ "line": "…" }</code> and
+      <code>POST …/api/cli/complete</code> for Tab completion, and
+      <code>POST …/api/cli/login</code> with <code>username</code> + <code>password</code> or <code>sessionToken</code> (not in the <code>line</code> string). For local dev,
+      Vite proxies <code>/api</code> to <code>http://127.0.0.1:3042</code>. In this monorepo,
+      run the API from <code>server/</code> (<code>npm start</code> after <code>npm run build</code>)
+      or use <code>docker compose -f server/docker-compose.yml up</code> from the repo root.
+    </p>
+    <web-console api-base="/api" height="360px"></web-console>
+    <script type="module" src="/src/index.ts"></script>
+  </body>
+</html>
