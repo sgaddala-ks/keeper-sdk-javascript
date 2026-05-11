@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Web console (dev)</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        margin: 0;
+        padding: 12px 16px;
+        box-sizing: border-box;
+      }
+      h1 {
+        margin: 0 0 12px;
+        font-size: 1.25rem;
+        font-weight: 600;
+      }
+      web-console,
+      keeper-shell {
+        display: block;
+        width: 100%;
+        box-sizing: border-box;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Web console (dev)</h1>
+    <web-console height="360px" collapsed></web-console>
+    <script type="module" src="./src/dev-bootstrap.ts"></script>
+  </body>
+</html>
