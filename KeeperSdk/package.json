@@ -8,7 +8,8 @@
         "directory": "KeeperSdk"
     },
     "license": "ISC",
-    "main": "src/index.ts",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
     "scripts": {
         "build": "tsc",
         "clean": "rm -rf dist",

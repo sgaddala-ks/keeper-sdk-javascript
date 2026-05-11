@@ -8,6 +8,7 @@ import {
     DTeam,
     DUserFolder,
     Authentication,
+    normal64Bytes,
 } from '@keeper-security/keeperapi'
 import type { SyncResult, SyncLogFormat, VaultStorage, SessionStorage, AuthUI3 } from '@keeper-security/keeperapi'
 import { InMemoryStorage } from '../storage/InMemoryStorage'
@@ -241,6 +242,28 @@ export class KeeperVault {
 
         this.synced = false
         this.log.info(`Logged in as ${username} (via session token)`)
+    }
+
+    /**
+     * Persist device token and private key for this vault host in session storage so
+     * {@link loginWithSessionToken} and {@link resumeSession} work without a prior password login on this machine.
+     * Values use the same base64 / base64url decoding as {@link SessionManager} (`normal64Bytes`).
+     */
+    public async registerDevice(
+        deviceToken: string,
+        privateKey: string,
+        options?: { username?: string }
+    ): Promise<void> {
+        const host = this.config.host
+        const save = this.sessionManager.createOnDeviceConfig(host)
+        await save({
+            deviceToken: normal64Bytes(deviceToken),
+            privateKey: normal64Bytes(privateKey),
+        })
+        if (options?.username) {
+            this.sessionManager.setLastUsername(options.username)
+        }
+        this.log.info(`Device credentials stored for host ${host}`)
     }
 
     public getSessionToken(): string | undefined {
