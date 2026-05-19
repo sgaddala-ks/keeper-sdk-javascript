@@ -28,12 +28,6 @@ function showShellLoadError(err: unknown): void {
 
 void (async () => {
   try {
-    const { installKeeperDevFetchLogger } = await import("./devApiLogger.js");
-    installKeeperDevFetchLogger();
-  } catch (e) {
-    console.warn("[keeper-shell dev] fetch logger skipped (non-fatal)", e);
-  }
-  try {
     await import("./KeeperShell.js");
   } catch (err: unknown) {
     showShellLoadError(err);
