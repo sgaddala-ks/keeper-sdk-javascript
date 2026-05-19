@@ -13,7 +13,7 @@ import {
 import type { SyncResult, SyncLogFormat, VaultStorage, SessionStorage, AuthUI3 } from '@keeper-security/keeperapi'
 import { InMemoryStorage } from '../storage/InMemoryStorage'
 import { SessionManager } from '../auth/SessionManager'
-import { ConsoleAuthUI } from '../auth/ConsoleAuthUI'
+import { getSdkPlatform } from '../platform'
 import { searchRecords, formatRecord, getRecordTitle, getRecordType } from '../records/RecordUtils'
 import {
     addRecord as addRecordOp,
@@ -141,7 +141,7 @@ export class KeeperVault {
         this.log = new ConsoleLogger(this.config.logLevel)
         this.storage = config?.storage || new InMemoryStorage()
         this.sessionManager = config?.sessionStorage || new SessionManager(this.config.configDir || undefined)
-        this.authUI = config?.authUI || new ConsoleAuthUI()
+        this.authUI = config?.authUI ?? getSdkPlatform().createAuthUI(this.config.useConsoleAuth)
 
         const authProvider = () => this.getAuthOrThrow()
         this.folderManager = new FolderManager(this.storage, this.folderSession, authProvider)

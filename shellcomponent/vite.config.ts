@@ -8,7 +8,7 @@ export default defineConfig({
   root: ".",
   resolve: {
     alias: {
-      "@keeper-security/keeper-sdk-javascript": resolve(__dirname, "../KeeperSdk/src/index.ts"),
+      "@keeper-security/keeper-sdk-javascript": resolve(__dirname, "../KeeperSdk/src/browser.ts"),
       "fs/promises": resolve(__dirname, "src/shims/fs-promises-empty.ts"),
       fs: resolve(__dirname, "src/shims/fs-empty.ts"),
       path: resolve(__dirname, "node_modules/path-browserify/index.js"),

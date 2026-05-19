@@ -1,14 +1,13 @@
-import { connectSdkPlatform } from './platform'
-import { nodeSdkPlatform } from './platform/node/platform'
-
-connectSdkPlatform(nodeSdkPlatform)
-
-export * from './api'
-
-/** Node.js Commander / CLI helpers (readline, ~/.keeper config). */
-export { ConsoleAuthUI } from './auth/ConsoleAuthUI'
-export { FileConfigLoader } from './auth/node/FileConfigLoader'
-export { login, cleanup, prompt, suppressLogs, loadKeeperConfig, resolveServer } from './auth/ConsoleLogin'
+export { SessionManager } from './auth/SessionManager'
+export type {
+    KeeperJsonConfig,
+    ConfigLoader,
+    ConfigurationUser,
+    ConfigurationServerConfig,
+    ConfigurationDeviceConfig,
+} from './auth/SessionManager'
+export { connectSdkPlatform, getSdkPlatform, isSdkPlatformConnected } from './platform'
+export type { SdkPlatform, SdkReadline, SdkRuntime } from './platform'
 
 export { InMemoryStorage } from './storage/InMemoryStorage'
 
@@ -27,10 +26,6 @@ export {
     SdkDefaults,
     AuthDefaults,
     ResultCodes,
-    AuthErrorCode,
-    SessionErrorCode,
-    TeamErrorCode,
-    UserErrorCode,
     KEEPER_PUBLIC_HOSTS,
     isBoolean,
     isString,
@@ -179,190 +174,37 @@ export type { AuthProvider, SharedFolderPermissionsInput } from './folders/Folde
 export { SharedFolderManager } from './sharedFolders/SharedFolderManager'
 
 export {
-    listTeams,
-    formatTeamsTable,
-    renderTeamsAsciiTable,
-    formatTeamRestricts,
-    TeamColumn,
-    SUPPORTED_TEAM_COLUMNS,
-    DEFAULT_TEAM_COLUMNS,
-} from './teams/listTeams'
+    dispatchCliLine,
+    dispatchKeeperCli,
+    ensureKeeperCliRegistry,
+    registerCliCommand,
+    registerCliAlias,
+    getCliCommand,
+    listCliCommands,
+    listCliCommandNames,
+    listDocumentedCommands,
+    getDetailedHelpPage,
+    formatDetailedHelpForCommand,
+    tokenizeArguments,
+    parseCliArgs,
+    wantsCliHelp,
+    rejectUnknownOptions,
+    loginWithCredentials,
+    loginWithSessionToken,
+    runLoginCommand,
+    runLogoutCommand,
+    KEEPER_VAULT_SURFACE,
+} from './cli'
 export type {
-    ListTeamsOptions,
-    ListTeamRow,
-    TeamColumnInput,
-    FormattedTeamsTable,
-    FormatTeamsTableOptions,
-} from './teams/listTeams'
+    CliResult,
+    ParsedCli,
+    CliCommandDefinition,
+    CliHelpDoc,
+    KeeperCliHost,
+    KeeperCliVault,
+} from './cli'
 
-export {
-    EnterpriseDataInclude,
-    EnterpriseDataManager,
-} from './teams/enterpriseData'
-export type {
-    EnterpriseDataManagerApi,
-    GetEnterpriseDataResponse,
-    EnterpriseTeamRecord,
-    EnterpriseTeamUserLink,
-    EnterpriseRoleUserLink,
-    EnterpriseRoleTeamLink,
-    EnterpriseQueuedTeamRecord,
-    EnterpriseQueuedTeamUserLink,
-    EnterpriseUserAliasLink,
-    EnterpriseUser,
-    EnterpriseRole,
-    EnterpriseNode,
-    DecryptedNodeNames,
-    DecryptedRoleNames,
-    EnterpriseDisplayNames,
-    NodePathOptions,
-} from './teams/enterpriseData'
-
-export { viewTeam, formatTeamView, teamViewTable } from './teams/viewTeam'
-export type {
-    TeamView,
-    TeamRoleInfo,
-    TeamUserInfo,
-    FormatTeamViewOptions,
-    FormattedTeamViewTable,
-    TeamViewTableRow,
-} from './teams/viewTeam'
-
-export {
-    addTeams,
-    formatAddTeamResult,
-    renderAddTeamAsciiTable,
-    AddTeamSourceKind,
-    AddTeamSkipReason,
-    AddTeamStatus,
-    TeamRestriction,
-} from './teams/addTeam'
-export type {
-    AddTeamInput,
-    AddTeamResult,
-    AddTeamItemResult,
-    AddTeamConfirm,
-    AddTeamConflictPrompt,
-    TeamRestrictionInput,
-    FormatAddTeamResultOptions,
-    FormattedAddTeamTable,
-    FormattedAddTeamRow,
-} from './teams/addTeam'
-
-export {
-    updateTeams,
-    formatUpdateTeamResult,
-    renderUpdateTeamAsciiTable,
-    UpdateTeamStatus,
-} from './teams/updateTeam'
-export type {
-    UpdateTeamInput,
-    UpdateTeamResult,
-    UpdateTeamItemResult,
-    FormattedUpdateTeamTable,
-    FormattedUpdateTeamRow,
-} from './teams/updateTeam'
-
-export {
-    deleteTeams,
-    formatDeleteTeamResult,
-    renderDeleteTeamAsciiTable,
-    DeleteTeamStatus,
-} from './teams/deleteTeam'
-export type {
-    DeleteTeamInput,
-    DeleteTeamResult,
-    DeleteTeamItemResult,
-    FormattedDeleteTeamTable,
-    FormattedDeleteTeamRow,
-} from './teams/deleteTeam'
-
-export { TeamManager } from './teams/TeamManager'
-
-export {
-    listUsers,
-    formatUsersTable,
-    renderUsersAsciiTable,
-    UserColumn,
-    SUPPORTED_USER_COLUMNS,
-    DEFAULT_USER_COLUMNS,
-} from './users/listUsers'
-
-export { viewUser, formatUserView, userViewTable } from './users/viewUser'
-
-export {
-    addUsers,
-    formatAddUserResult,
-    renderAddUserAsciiTable,
-    AddUserStatus,
-    AddUserSkipReason,
-} from './users/addUser'
-
-export {
-    updateUsers,
-    formatUpdateUserResult,
-    renderUpdateUserAsciiTable,
-    UpdateUserStatus,
-} from './users/updateUser'
-
-export {
-    deleteUsers,
-    formatDeleteUserResult,
-    renderDeleteUserAsciiTable,
-    DeleteUserStatus,
-} from './users/deleteUser'
-
-export {
-    actionUsers,
-    formatUserActionResult,
-    renderUserActionAsciiTable,
-    UserAction,
-    UserActionStatus,
-    UserActionSkipReason,
-} from './users/actionUser'
-
-export type {
-    UserColumnInput,
-    ListUsersOptions,
-    ListUserRow,
-    FormattedUsersTable,
-    FormatUsersTableOptions,
-    UserTeamInfo,
-    UserRoleInfo,
-    UserView,
-    FormatUserViewOptions,
-    FormattedUserViewTable,
-    UserViewTableRow,
-    AddUserInput,
-    AddUserItemResult,
-    AddUserResult,
-    FormatAddUserResultOptions,
-    FormattedAddUserTable,
-    UpdateUserInput,
-    UpdateUserItemResult,
-    UpdateUserResult,
-    FormattedUpdateUserTable,
-    DeleteUserInput,
-    DeleteUserItemResult,
-    DeleteUserResult,
-    FormattedDeleteUserTable,
-    UserActionInput,
-    UserActionItemResult,
-    UserActionResult,
-    FormattedUserActionTable,
-    AliasUserInput,
-    AliasUserResult,
-    FormattedUserStatus,
-} from './users/userTypes'
-
-export { EnterpriseUserStatus } from './users/userTypes'
-
-export {
-    aliasUser,
-    AliasOperation,
-} from './users/aliasUser'
-
-export { UserManager } from './users/UserManager'
+export { Auth, KeeperEnvironment, syncDown, Authentication } from '@keeper-security/keeperapi'
 
 export type {
     DRecord,

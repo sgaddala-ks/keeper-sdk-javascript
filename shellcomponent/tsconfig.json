@@ -12,7 +12,7 @@
     "types": ["node"],
     "baseUrl": ".",
     "paths": {
-      "@keeper-security/keeper-sdk-javascript": ["../KeeperSdk/src/index.ts"]
+      "@keeper-security/keeper-sdk-javascript": ["../KeeperSdk/src/browser.ts"]
     }
   },
   "include": ["src/**/*.ts", "vite.config.ts"]

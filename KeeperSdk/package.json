@@ -9,6 +9,7 @@
     },
     "license": "ISC",
     "main": "dist/index.js",
+    "browser": "dist/browser.js",
     "types": "dist/index.d.ts",
     "scripts": {
         "build": "tsc",
@@ -24,6 +25,7 @@
     "dependencies": {
         "@keeper-security/keeperapi": "17.1.3",
         "ts-node": "^10.7.0",
+        "asmcrypto.js": "^2.3.2",
         "typescript": "^4.6.3"
     },
     "devDependencies": {

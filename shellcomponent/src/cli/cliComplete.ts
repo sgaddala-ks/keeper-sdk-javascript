@@ -1,53 +1,21 @@
 /**
- * Tab-completion metadata for the keeper-shell CLI.
+ * Tab-completion metadata for the keeper-shell CLI (from SDK command registry).
  */
-import { CLI_TOP_LEVEL_NAMES } from "./cliHelp.js";
-
-const TOP_LEVEL = CLI_TOP_LEVEL_NAMES;
-
-const SUBCOMMANDS: Record<string, readonly string[]> = {
-  records: ["list"],
-  folders: ["list"],
-};
+import { getCliCommand, listCliCommandNames } from "@keeper-security/keeper-sdk-javascript";
 
 const HELP_FLAGS = ["--help", "-h"] as const;
 
-/** Long/short flags after a command (plus universal --help / -h). */
-const FLAG_OPTIONS: Record<string, readonly string[]> = {
-  login: [
-    "--user",
-    "--username",
-    "--session-token",
-    "--token",
-    "--st",
-    "--session-token-plain",
-  ],
-  mkdir: ["-p", "--parents"],
-  "register-device": [
-    "--device-token",
-    "--dt",
-    "--private-key",
-    "--pk",
-    "--user",
-    "--username",
-  ],
-};
-
 function flagsFor(cmd: string): readonly string[] {
-  const extra = FLAG_OPTIONS[cmd] ?? [];
+  const def = getCliCommand(cmd);
+  const extra = def?.flagOptions ?? [];
   return [...HELP_FLAGS, ...extra];
 }
 
 export type CliCompleteResult = {
-  /** Line prefix to keep; replacement segment is `line.slice(base.length)`. */
   base: string;
-  /** Suggested full tokens (each replaces the partial segment). */
   candidates: string[];
 };
 
-/**
- * @param line - Current input (cursor treated as end of line).
- */
 export function completeCliLine(line: string): CliCompleteResult {
   const completesNewWord = /\s$/.test(line);
   const segments = line.match(/\S+/g) ?? [];
@@ -73,7 +41,8 @@ export function completeCliLine(line: string): CliCompleteResult {
     partialLen > 0 ? line.slice(0, line.length - partialLen) : line;
 
   if (words.length === 0) {
-    const hits = TOP_LEVEL.filter((c) => c.startsWith(stubLc));
+    const top = listCliCommandNames();
+    const hits = top.filter((c) => c.startsWith(stubLc));
     return { base: baseFor(stub.length), candidates: hits };
   }
 
@@ -82,16 +51,16 @@ export function completeCliLine(line: string): CliCompleteResult {
   if (words.length === 1) {
     if (stub.startsWith("-")) {
       const hits = flagsFor(cmd).filter((f) => lc(f).startsWith(stubLc));
-      return { base: baseFor(stub.length), candidates: hits };
+      return { base: baseFor(stub.length), candidates: [...hits] };
     }
-    const subs = SUBCOMMANDS[cmd];
-    if (subs) {
+    const subs = getCliCommand(cmd)?.subcommands;
+    if (subs?.length) {
       const hits = subs.filter((s) => lc(s).startsWith(stubLc));
-      return { base: baseFor(stub.length), candidates: hits };
+      return { base: baseFor(stub.length), candidates: [...hits] };
     }
     if (completesNewWord || stub.length > 0) {
       const hits = flagsFor(cmd).filter((f) => lc(f).startsWith(stubLc));
-      return { base: baseFor(stub.length), candidates: hits };
+      return { base: baseFor(stub.length), candidates: [...hits] };
     }
   }
 
