@@ -98,7 +98,7 @@ npm install
 npm run dev
 ```
 
-Open the **`http://localhost:5175`** (or whatever port Vite prints) URL—**not** `file://`. The dev page is **`index.html`**; it loads **`src/dev-bootstrap.ts`**, which registers the shell and optional dev-only fetch logging.
+Open the **`http://localhost:5175`** (or whatever port Vite prints) URL—**not** `file://`. The dev page is **`index.html`**; it loads **`src/dev-bootstrap.ts`**, which registers the shell.
 
 ```bash
 npm run build
