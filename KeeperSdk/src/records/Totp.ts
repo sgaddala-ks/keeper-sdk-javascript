@@ -1,4 +1,4 @@
-import { createHmac } from 'crypto'
+import { getSdkPlatform } from '../platform'
 
 export type TotpAlgorithm = 'SHA1' | 'SHA256' | 'SHA512'
 
@@ -98,9 +98,8 @@ export function getTotpCode(urlOrParams: string | TotpParams, now: number = Date
     const counter = Math.floor(seconds / params.period)
     const secondsRemaining = params.period - (seconds % params.period)
 
-    const digest = createHmac(params.algorithm.toLowerCase(), Buffer.from(key))
-        .update(counterToBuffer(counter))
-        .digest()
+    const algo = params.algorithm.toLowerCase() as 'sha1' | 'sha256' | 'sha512'
+    const digest = getSdkPlatform().hmac(algo, key, counterToBuffer(counter))
 
     if (digest.length === 0) return null
     const offset = digest[digest.length - 1] & 0x0f
