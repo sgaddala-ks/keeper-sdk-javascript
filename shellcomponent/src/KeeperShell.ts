@@ -100,6 +100,15 @@ function longestCommonPrefix(values: string[]): string {
   return pref;
 }
 
+const PROMPT_PREFIX = "$ ";
+
+/** Screen rows used by prompt + input when the line wraps (cols from xterm). */
+function promptDisplayRows(displayChars: number, cols: number): number {
+  const width = Math.max(cols, 1);
+  if (displayChars <= 0) return 1;
+  return Math.ceil(displayChars / width);
+}
+
 /** Parsed stdin tokens from xterm (arrow keys arrive as ESC sequences). */
 type InputTok =
   | { k: "c"; v: string }
@@ -694,6 +703,8 @@ export class KeeperShell extends HTMLElement {
     let histFromEnd = -1;
     let histDraft = "";
     let cursorPos = 0;
+    /** Rows on screen for the current prompt line (increases when input wraps). */
+    let promptRows = 1;
     let maskSensitive = this.hasAttribute(ATTR_MASK_INPUT);
     let pendingLoginUsername: string | null = null;
 
@@ -709,8 +720,16 @@ export class KeeperShell extends HTMLElement {
     };
 
     const writeFreshPrompt = (): void => {
-      term.write("$ ");
+      promptRows = 1;
+      term.write(PROMPT_PREFIX);
       afterNewPrompt();
+    };
+
+    const clearPromptRows = (): void => {
+      term.write("\r\x1b[2K");
+      for (let r = 1; r < promptRows; r++) {
+        term.write("\x1b[1A\r\x1b[2K");
+      }
     };
 
     const writePromptLine = (): void => {
@@ -718,7 +737,10 @@ export class KeeperShell extends HTMLElement {
       if (cursorPos < 0) cursorPos = 0;
       if (cursorPos > line.length) cursorPos = line.length;
       const visible = maskDisplayActive() ? "*".repeat(line.length) : line;
-      term.write(`\r\x1b[2K$ ${visible}`);
+      const displayChars = PROMPT_PREFIX.length + visible.length;
+      clearPromptRows();
+      term.write(`${PROMPT_PREFIX}${visible}`);
+      promptRows = promptDisplayRows(displayChars, term.cols);
       const back = line.length - cursorPos;
       if (back > 0) term.write(`\x1b[${back}D`);
     };
@@ -952,12 +974,21 @@ export class KeeperShell extends HTMLElement {
 
     const handleDataChunk = async (data: string): Promise<void> => {
       const tokens = feedInput(data, inputCarry);
+      let redrawPrompt = false;
+      const flushRedraw = (): void => {
+        if (redrawPrompt) {
+          writePromptLine();
+          redrawPrompt = false;
+        }
+      };
       for (const tok of tokens) {
         if (tok.k === "up") {
+          flushRedraw();
           historyOlder();
           continue;
         }
         if (tok.k === "down") {
+          flushRedraw();
           historyNewer();
           continue;
         }
@@ -965,8 +996,9 @@ export class KeeperShell extends HTMLElement {
           bumpEditing();
           if (cursorPos > 0) {
             cursorPos--;
-            writePromptLine();
+            redrawPrompt = true;
           } else {
+            flushRedraw();
             term.write("\x07");
           }
           continue;
@@ -975,8 +1007,9 @@ export class KeeperShell extends HTMLElement {
           bumpEditing();
           if (cursorPos < this._lineBuf.length) {
             cursorPos++;
-            writePromptLine();
+            redrawPrompt = true;
           } else {
+            flushRedraw();
             term.write("\x07");
           }
           continue;
@@ -986,15 +1019,18 @@ export class KeeperShell extends HTMLElement {
           if (cursorPos < this._lineBuf.length) {
             const line = this._lineBuf;
             this._lineBuf = line.slice(0, cursorPos) + line.slice(cursorPos + 1);
-            writePromptLine();
+            redrawPrompt = true;
           } else {
+            flushRedraw();
             term.write("\x07");
           }
           continue;
         }
         const ch = tok.v;
         if (ch === "\r" || ch === "\n") {
+          redrawPrompt = false;
           term.write("\r\n");
+          promptRows = 1;
           await flushLine();
           continue;
         }
@@ -1004,15 +1040,17 @@ export class KeeperShell extends HTMLElement {
             const line = this._lineBuf;
             this._lineBuf = line.slice(0, cursorPos - 1) + line.slice(cursorPos);
             cursorPos--;
-            writePromptLine();
+            redrawPrompt = true;
           }
           continue;
         }
         if (ch === "\t") {
+          flushRedraw();
           await runTabComplete();
           continue;
         }
         if (ch === "\x0f") {
+          flushRedraw();
           if (pendingLoginUsername === null) {
             maskSensitive = !maskSensitive;
           }
@@ -1020,6 +1058,7 @@ export class KeeperShell extends HTMLElement {
           continue;
         }
         if (ch === "\x03") {
+          redrawPrompt = false;
           this._lineBuf = "";
           cursorPos = 0;
           pendingLoginUsername = null;
@@ -1035,8 +1074,9 @@ export class KeeperShell extends HTMLElement {
         const line = this._lineBuf;
         this._lineBuf = line.slice(0, cursorPos) + ch + line.slice(cursorPos);
         cursorPos++;
-        writePromptLine();
+        redrawPrompt = true;
       }
+      flushRedraw();
     };
 
     term.onData((data) => {
