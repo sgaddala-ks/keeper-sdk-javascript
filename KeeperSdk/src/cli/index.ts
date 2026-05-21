@@ -5,6 +5,8 @@ import { loginCommand } from './commands/login'
 import { logoutCommand } from './commands/logout'
 import { recordsCommand } from './commands/records'
 import { registerDeviceCommand } from './commands/registerDevice'
+import { restoreSessionCommand } from './commands/restoreSession'
+import { syncCommand } from './commands/sync'
 
 let registryInitialized = false
 
@@ -15,6 +17,8 @@ export function ensureKeeperCliRegistry(): void {
     registerCliCommand(helpCommand)
     registerCliCommand(loginCommand)
     registerCliCommand(registerDeviceCommand)
+    registerCliCommand(restoreSessionCommand)
+    registerCliCommand(syncCommand)
     registerCliCommand(recordsCommand)
     registerCliCommand(foldersCommand)
     registerCliCommand(logoutCommand)
@@ -82,5 +86,15 @@ export { recordsCommand } from './commands/records'
 export { foldersCommand } from './commands/folders'
 export { registerDeviceCommand } from './commands/registerDevice'
 export { helpCommand } from './commands/help'
+export { restoreSessionCommand } from './commands/restoreSession'
+export { syncCommand, runVaultSync } from './commands/sync'
 
 export { utf8ToBase64Url, recordUid } from './utils'
+
+export type { SessionRestoreInput } from '../auth/sessionRestore'
+export {
+    toSessionParams,
+    validateSessionRestoreInput,
+    sessionRestoreFromJson,
+    resolveSessionRestorePayload,
+} from '../auth/sessionRestore'
