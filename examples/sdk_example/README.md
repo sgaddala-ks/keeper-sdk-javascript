@@ -24,20 +24,24 @@ npm run link-local
 
 Examples use `~/.keeper/config.json` for saved credentials and persistent login. If the file is not found, you will be prompted for server, username, and password.
 
-## Available Examples
+For restore-session flows, provide a path to session JSON (extension `SessionParams` shape). There is no default path.
+
+ ## Available Examples
 
 ### Authentication
 
 | Command | Description |
 |---|---|
 | `npm run auth:login` | Master password login with retry logic, masked input, and vault sync. Automatically attempts persistent login (via clone code from `~/.keeper/config.json`) before falling back to the password prompt. |
-| `npm run auth:session-token` | Login using an existing session token for pre-authenticated workflows. Prompts for username, host, and session token. |
+| `npm run auth:session-token` | Login using an existing session token for pre-authenticated workflows. Prompts for username, host, and session token. Requires device token + private key in `~/.keeper/config.json` or use `auth:register-device` first in the same run. |
+| `npm run auth:register-device` | Store device token + device private key on a `KeeperVault` (in-memory), optionally then `loginWithSessionToken` + sync. |
+| `npm run auth:restore-session` | Restore extension-style session JSON (prompts for file path; required), then syncDown. No device keys or `loginV3`. |
 
 ### Records
 
 | Command | Description |
 |---|---|
-| `npm run records:list` | List all records in the vault |
+| `npm run records:list` | List all records in the vault (password / persistent login via `login()`) |
 | `npm run records:get` | Get details of a specific record by UID or title |
 | `npm run records:add` | Add a new typed record to the vault |
 | `npm run records:update` | Update fields on an existing record |
@@ -63,3 +67,11 @@ npm run records:get
 ```
 
 Most examples will log in automatically using persistent login (if configured) or prompt for credentials. After authentication, follow the interactive prompts.
+
+**Restore-session flag** on `records:list` (requires `--from-json`; no default path):
+
+```bash
+npm run records:list -- --restore-session --from-json /path/to/session.json
+npm run records:list -- --restore-session --from-json /path/to/session.json --host keepersecurity.eu
+npm run records:list -- --restore-session --from-json /path/to/session.json --no-sync
+```

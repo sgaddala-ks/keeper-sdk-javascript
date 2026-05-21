@@ -18,6 +18,8 @@
     "keeper-shell.d.ts"
   ],
   "scripts": {
+    "clean": "rm -rf dist node_modules",
+    "rebuild": "npm run clean && npm install && npm --prefix ../KeeperSdk run rebuild && npm run build",
     "build:local-keeper-sdk": "npm --prefix ../KeeperSdk install && npm --prefix ../KeeperSdk run build",
     "dev": "npm install && vite",
     "dev:inspect": "npm install && node --inspect=9229 ./node_modules/vite/bin/vite.js",

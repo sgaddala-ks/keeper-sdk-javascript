@@ -14,6 +14,10 @@ import type { SyncResult, SyncLogFormat, VaultStorage, SessionStorage, AuthUI3 }
 import { InMemoryStorage } from '../storage/InMemoryStorage'
 import { SessionManager } from '../auth/SessionManager'
 import { getSdkPlatform } from '../platform'
+import {
+    toSessionParams,
+    type SessionRestoreInput,
+} from '../auth/sessionRestore'
 import { searchRecords, formatRecord, getRecordTitle, getRecordType } from '../records/RecordUtils'
 import {
     addRecord as addRecordOp,
@@ -268,6 +272,29 @@ export class KeeperVault {
 
     public getSessionToken(): string | undefined {
         return this.auth?.sessionToken || undefined
+    }
+
+    /**
+     * Restore an existing Keeper session from extension-style {@link SessionRestoreInput}
+     * (maps to keeperapi `SessionParams` + `continueSession`). Does not run `loginV3` or require device keys.
+     */
+    public async restoreSession(input: SessionRestoreInput): Promise<void> {
+        const params = toSessionParams(input)
+        await this.sessionManager.saveSessionParameters(params)
+        this.sessionManager.setLastUsername(params.username)
+
+        this.auth = await this.createAuth()
+        await this.auth.continueSession()
+
+        if (!this.auth.sessionToken) {
+            throw new KeeperSdkError(
+                'Session restore failed — session token may be expired or invalid.',
+                ResultCodes.SESSION_TOKEN_EXPIRED
+            )
+        }
+
+        this.synced = false
+        this.log.info(`Session restored for ${params.username}`)
     }
 
     public async resumeSession(): Promise<void> {

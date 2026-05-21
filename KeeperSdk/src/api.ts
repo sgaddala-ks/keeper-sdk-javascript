@@ -84,6 +84,14 @@ export type {
 export { KeeperVault } from './vault/KeeperVault'
 export type { KeeperVaultConfig, VaultSummary } from './vault/KeeperVault'
 
+export type { SessionRestoreInput } from './auth/sessionRestore'
+export {
+    toSessionParams,
+    validateSessionRestoreInput,
+    sessionRestoreFromJson,
+    resolveSessionRestorePayload,
+} from './auth/sessionRestore'
+
 export { getFolder, findFolder, GetFolderFormat } from './folders/getFolder'
 export type {
     GetFolderOptions,
