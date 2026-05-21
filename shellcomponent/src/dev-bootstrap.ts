@@ -3,6 +3,9 @@
  * (static `import "./KeeperShell.js"` would fail the whole module with no UI feedback).
  */
 import "./bufferPolyfill.js";
+import { installKeeperSameOriginProxy } from "./dev/installKeeperSameOriginProxy.js";
+
+installKeeperSameOriginProxy();
 
 function showShellLoadError(err: unknown): void {
   const msg = err instanceof Error ? `${err.message}\n\n${err.stack ?? ""}` : String(err);
