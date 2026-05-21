@@ -1,8 +1,17 @@
 import { login, cleanup, formatRecord, logger } from '@keeper-security/keeper-sdk-javascript'
 import { runExample } from '../utils/runner'
+import { assertRestoreCliArgs, loginViaRestoreSession, parseRestoreCliArgs } from '../utils/restoreAuth'
 
 async function listRecords() {
-    const vault = await login()
+    const cli = parseRestoreCliArgs()
+    assertRestoreCliArgs(cli)
+    const vault = cli.restoreSession
+        ? await loginViaRestoreSession({
+              jsonPath: cli.jsonPath,
+              host: cli.host,
+              sync: !cli.noSync,
+          })
+        : await login()
 
     try {
         const records = vault.getRecords()

@@ -82,17 +82,63 @@ function asCliVault(v: VaultInstance): KeeperCliVault {
     login: (u, p) => v.login(u, p),
     loginWithSessionToken: (u, t) => v.loginWithSessionToken(u, t),
     logout: () => v.logout(),
-    sync: async () => {
-      await v.sync();
-    },
+    sync: () => v.sync(),
     getRecords: () => v.getRecords(),
     getSharedFolders: () => v.getSharedFolders(),
     registerDevice: (dt, pk, o) => v.registerDevice(dt, pk, o),
+    restoreSession: (input) => v.restoreSession(input),
   };
+}
+
+async function readTextFile(path: string): Promise<string> {
+  const p = path.trim().replace(/^@/, "");
+  if (/^https?:\/\//i.test(p)) {
+    const res = await fetch(p);
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status} loading ${p}`);
+    }
+    return res.text();
+  }
+
+  const tryFetch = async (url: string): Promise<string | null> => {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const ct = res.headers.get("content-type") ?? "";
+    if (ct.includes("text/html")) return null;
+    const text = await res.text();
+    const head = text.trimStart().slice(0, 32).toLowerCase();
+    if (head.startsWith("<!") || head.startsWith("<html")) return null;
+    return text;
+  };
+
+  if (p.startsWith("/")) {
+    const body = await tryFetch(`/@fs${p}`);
+    if (body !== null) return body;
+    throw new Error(
+      `Could not read ${p} (HTTP failed). Run \`npm run dev\` in shellcomponent and ensure the path is allowed by Vite fs.allow.`
+    );
+  }
+
+  if (import.meta.env?.DEV) {
+    const fromDev = await tryFetch("/dev/keeper-session.json");
+    if (fromDev !== null && (p === "conf.json" || p.endsWith("/conf.json"))) {
+      return fromDev;
+    }
+  }
+
+  const body = await tryFetch(p);
+  if (body !== null) return body;
+
+  throw new Error(
+    `Could not read ${p}. In Vite dev use an absolute path:\n` +
+      `  restore-session --from-json /Users/you/.../keeper-sdk-javascript/conf.json\n` +
+      `  or: restore-session --from-json /dev/keeper-session.json`
+  );
 }
 
 export const shellKeeperCliHost: KeeperCliHost = {
   getVault: () => asCliVault(getVault()),
   envString,
   formatError: formatKeeperClientError,
+  readTextFile,
 };

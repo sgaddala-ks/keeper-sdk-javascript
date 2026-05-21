@@ -1,11 +1,36 @@
-import { defineConfig } from "vite";
+import { readFileSync, existsSync } from "node:fs";
+import { defineConfig, type Plugin } from "vite";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
+const repoConfJson = resolve(__dirname, "../conf.json");
+
+/** Dev-only: load repo-root conf.json without typing a full /@fs path in the shell. */
+function keeperDevSessionConfPlugin(): Plugin {
+  return {
+    name: "keeper-dev-session-conf",
+    configureServer(server) {
+      server.middlewares.use("/dev/keeper-session.json", (_req, res, next) => {
+        try {
+          if (!existsSync(repoConfJson)) {
+            res.statusCode = 404;
+            res.end("conf.json not found at repo root");
+            return;
+          }
+          res.setHeader("Content-Type", "application/json");
+          res.end(readFileSync(repoConfJson));
+        } catch (e) {
+          next(e);
+        }
+      });
+    },
+  };
+}
 
 export default defineConfig({
   root: ".",
+  plugins: [keeperDevSessionConfPlugin()],
   resolve: {
     alias: {
       "@keeper-security/keeper-sdk-javascript": resolve(__dirname, "../KeeperSdk/src/browser.ts"),
