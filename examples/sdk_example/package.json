@@ -8,6 +8,7 @@
         "auth:register-device": "ts-node src/auth/register_device.ts",
         "auth:restore-session": "ts-node src/auth/restore_session.ts",
         "records:list": "ts-node src/records/list_records.ts",
+        "records:list:shell-cli": "ts-node src/records/list_records_shell_cli.ts",
         "records:get": "ts-node src/records/get_record.ts",
         "records:add": "ts-node src/records/add_record.ts",
         "records:update": "ts-node src/records/update_record.ts",

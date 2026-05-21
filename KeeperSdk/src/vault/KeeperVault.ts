@@ -345,14 +345,22 @@ export class KeeperVault {
     public async sync(): Promise<SyncResult> {
         const auth = this.getAuthOrThrow()
 
-        const result = await syncDown({
-            auth,
-            storage: this.storage,
-            logFormat: this.config.logFormat,
-        })
-
-        this.synced = true
-        return result
+        try{
+            const result = await syncDown({
+                auth,
+                storage: this.storage,
+                logFormat: this.config.logFormat,
+            })
+            if (result.error) {
+                this.log.error('Sync error:', result.error)
+                throw new KeeperSdkError(`Sync failed: ${result.error}`, ResultCodes.SYNC_FAILED)
+            }
+            this.synced = true
+            return result
+        }catch(e) {
+            this.log.error('Sync failed:', extractErrorMessage(e))
+            throw e
+        }
     }
 
     public async batch(fn: () => Promise<void>): Promise<void> {

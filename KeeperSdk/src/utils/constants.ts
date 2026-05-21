@@ -66,6 +66,10 @@ export enum UserErrorCode {
     UserAliasFailed = 'user_alias_failed',
 }
 
+export enum SyncErrorCode {
+    SyncFailed = 'sync_failed',
+}
+
 export const ResultCodes = {
     INVALID_CREDENTIALS: AuthErrorCode.InvalidCredentials,
     MISSING_USERNAME: AuthErrorCode.MissingUsername,
@@ -110,6 +114,7 @@ export const ResultCodes = {
     USER_ACTION_FAILED: UserErrorCode.UserActionFailed,
     USER_ACTION_ALL_NOT_SUPPORTED: UserErrorCode.UserActionAllNotSupported,
     USER_ALIAS_FAILED: UserErrorCode.UserAliasFailed,
+    SYNC_FAILED: SyncErrorCode.SyncFailed,
 } as const
 
 export const KEEPER_PUBLIC_HOSTS: Record<string, string> = {

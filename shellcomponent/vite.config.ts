@@ -2,6 +2,7 @@ import { readFileSync, existsSync } from "node:fs";
 import { defineConfig, type Plugin } from "vite";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { keeperSameOriginProxyPlugin } from "./vite/keeperSameOriginProxyPlugin.js";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const repoConfJson = resolve(__dirname, "../conf.json");
@@ -30,7 +31,7 @@ function keeperDevSessionConfPlugin(): Plugin {
 
 export default defineConfig({
   root: ".",
-  plugins: [keeperDevSessionConfPlugin()],
+  plugins: [keeperDevSessionConfPlugin(), keeperSameOriginProxyPlugin()],
   resolve: {
     alias: {
       "@keeper-security/keeper-sdk-javascript": resolve(__dirname, "../KeeperSdk/src/browser.ts"),
