@@ -201,8 +201,10 @@ export {
     loginWithSessionToken,
     runLoginCommand,
     runLogoutCommand,
-    KEEPER_VAULT_SURFACE,
+    KeeperCliParser,
+    createKeeperCliParser,
 } from './cli'
+export type { KeeperCliParserOptions } from './cli'
 export type {
     CliResult,
     ParsedCli,
