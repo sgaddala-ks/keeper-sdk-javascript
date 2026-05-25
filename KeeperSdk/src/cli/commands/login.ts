@@ -116,12 +116,22 @@ export async function loginWithSessionToken(
     }
 }
 
-/** Attempt env/password login when vault commands need a session. */
+/**
+ * Returns success if a session is active. Otherwise emits a plain
+ * "not logged in" error — no login flags or prompts. Commands that want
+ * env-based auto-login should call runLoginCommand explicitly.
+ *
+ * Auto-login is preserved only when KEEPER_USERNAME is present in env;
+ * runLoginCommand then handles password/session-token resolution.
+ */
 export async function ensureLoggedIn(host: KeeperCliHost): Promise<CliResult> {
     if (host.getVault().isLoggedIn) {
         return { code: 0, out: '', err: '' }
     }
-    return runLoginCommand(host, { positional: [], opts: new Map() })
+    if (host.envString('KEEPER_USERNAME')) {
+        return runLoginCommand(host, { positional: [], opts: new Map() })
+    }
+    return { code: 1, out: '', err: 'not logged in\n' }
 }
 
 export const loginCommand: CliCommandDefinition = {
@@ -145,7 +155,7 @@ export const loginCommand: CliCommandDefinition = {
         synopsis: `  login [--username|--user EMAIL_OR_NAME]
   login [--username|--user U] [--session-token|--token|--st TOKEN]
   login [--username|--user U] [--session-token TOKEN] [--session-token-plain]`,
-        description: `  Establishes a Keeper session using KeeperVault.
+        description: `  Establishes a Keeper session.
 
   Username comes from --username / --user or KEEPER_USERNAME.
 
@@ -154,12 +164,11 @@ export const loginCommand: CliCommandDefinition = {
   Web shell: run login with only a username; the UI prompts for a masked password
   and sends it through the login transport, not in "line".
 
-  Session token login uses KeeperVault.loginWithSessionToken. The token may be
-  passed on the command line or via KEEPER_SESSION_TOKEN (sensitive — same
-  caveats as any secret on argv).
+  Session token login: pass the token on the command line or via
+  KEEPER_SESSION_TOKEN (sensitive — same caveats as any secret on argv).
 
-  --session-token-plain encodes the token from UTF-8 to base64url before the
-  SDK call (same idea as the session_token_login example when the token is raw text).
+  --session-token-plain treats the value as plain UTF-8 and encodes base64url
+  before login (same idea as the session_token_login example).
 
   Device registration: session token login requires deviceToken + privateKey for
   this host in session storage. Use register-device (or a prior password login in
@@ -171,9 +180,6 @@ export const loginCommand: CliCommandDefinition = {
   KEEPER_PASSWORD          Password for non-interactive login (no session token).
   KEEPER_SESSION_TOKEN     Session token when not passed as a flag.
   KEEPER_HOST              Optional vault host / region (also: keeper-host attribute).`,
-        keeperSdk: `  Uses KeeperVault.login or loginWithSessionToken, then sync. resumeSession and
-  clone-code flows exist in the SDK but are not exposed in this CLI yet.`,
-        appendVaultSurface: true,
     },
     run: (host, parsed) => runLoginCommand(host, parsed),
 }

@@ -277,6 +277,10 @@ export class KeeperVault {
     /**
      * Restore an existing Keeper session from extension-style {@link SessionRestoreInput}
      * (maps to keeperapi `SessionParams` + `continueSession`). Does not run `loginV3` or require device keys.
+     *
+     * After restoring local state, this performs a lightweight server roundtrip
+     * (`account_summary`) to confirm the token is still valid. A 401 / expired
+     * token surfaces here instead of much later from `sync()`.
      */
     public async restoreSession(input: SessionRestoreInput): Promise<void> {
         const params = toSessionParams(input)
@@ -290,6 +294,21 @@ export class KeeperVault {
             throw new KeeperSdkError(
                 'Session restore failed — session token may be expired or invalid.',
                 ResultCodes.SESSION_TOKEN_EXPIRED
+            )
+        }
+
+        try {
+            await this.auth.loadAccountSummary()
+        } catch (err) {
+            const code = extractResultCode(err)
+            const msg = extractErrorMessage(err)
+            this.disconnect()
+            const isExpired = code === ResultCodes.SESSION_TOKEN_EXPIRED
+            throw new KeeperSdkError(
+                isExpired
+                    ? `Session token rejected by server (${code}): ${msg}. Re-export session JSON and try again.`
+                    : `Session restore failed: ${msg}`,
+                code ?? ResultCodes.SESSION_TOKEN_EXPIRED
             )
         }
 

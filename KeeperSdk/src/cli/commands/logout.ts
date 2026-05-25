@@ -32,9 +32,8 @@ export const logoutCommand: CliCommandDefinition = {
     help: {
         title: 'logout — end the current Keeper session',
         synopsis: '  logout',
-        description: '  Calls KeeperVault.logout when a session exists.',
+        description: '  Ends the current session if one exists.',
         options: '  None.',
-        appendVaultSurface: true,
     },
     run: (host, parsed) => runLogoutCommand(host, parsed),
 }

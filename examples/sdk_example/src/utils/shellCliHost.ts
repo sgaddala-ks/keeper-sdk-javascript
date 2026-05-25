@@ -70,6 +70,13 @@ function asCliVault(v: VaultInstance): KeeperCliVault {
         getSharedFolders: () => v.getSharedFolders(),
         registerDevice: (dt, pk, o) => v.registerDevice(dt, pk, o),
         restoreSession: (input) => v.restoreSession(input),
+        listFolder: (options) => v.listFolder(options),
+        tree: (options) => v.tree(options),
+        changeDirectory: (path) => v.changeDirectory(path),
+        getCurrentFolderUid: () => v.getCurrentFolderUid(),
+        getWorkingFolderDisplayName: () => v.getWorkingFolderDisplayName(),
+        getFolder: (uidOrName, options) => v.getFolder(uidOrName, options),
+        mkdir: (path, options) => v.mkdir(path, options),
     }
 }
 

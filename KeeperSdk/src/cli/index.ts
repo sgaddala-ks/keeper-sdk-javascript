@@ -58,8 +58,6 @@ export function getDetailedHelpPage(name: string): string | null {
     return getDetailedHelpPageForRegistry(listCliCommands(), name)
 }
 
-export { KEEPER_VAULT_SURFACE } from './vaultSurface'
-
 export {
     registerCliCommand,
     registerCliAlias,
@@ -72,6 +70,9 @@ export {
 } from './registry'
 
 export { dispatchKeeperCli, dispatchCliLine } from './dispatch'
+
+export { KeeperCliParser, createKeeperCliParser } from './parser'
+export type { KeeperCliParserOptions } from './parser'
 
 export {
     runLoginCommand,

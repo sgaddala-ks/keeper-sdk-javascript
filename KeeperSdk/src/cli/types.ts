@@ -1,5 +1,10 @@
 import type { DRecord, DSharedFolder, SyncResult } from '@keeper-security/keeperapi'
 import type { SessionRestoreInput } from '../auth/sessionRestore'
+import type { ChangeDirectoryResult } from '../folders/changeDirectory'
+import type { FolderTreeBuildOptions } from '../folders/folderTree'
+import type { GetFolderOptions, GetFolderResult } from '../folders/getFolder'
+import type { ListFolderOptions, ListFolderResult } from '../folders/listFolder'
+import type { MkdirOptions } from '../folders/addFolder'
 
 export type CliResult = {
     code: number
@@ -26,6 +31,14 @@ export type KeeperCliVault = {
     getSharedFolders(): DSharedFolder[]
     registerDevice(deviceToken: string, privateKey: string, options?: { username?: string }): Promise<void>
     restoreSession(input: SessionRestoreInput): Promise<void>
+    /** Folder navigation. Optional so existing hosts keep compiling; commands check at runtime. */
+    listFolder?: (options?: ListFolderOptions) => Promise<ListFolderResult>
+    tree?: (options?: FolderTreeBuildOptions) => Promise<string>
+    changeDirectory?: (path: string) => Promise<ChangeDirectoryResult>
+    getCurrentFolderUid?: () => string | null
+    getWorkingFolderDisplayName?: () => string
+    getFolder?: (uidOrName: string, options?: GetFolderOptions) => Promise<GetFolderResult>
+    mkdir?: (path: string, options?: MkdirOptions) => Promise<{ folderUid: string; success: boolean; message?: string }>
 }
 
 /** Host adapter (browser shell, Node Commander, tests). */
@@ -44,11 +57,9 @@ export type CliHelpDoc = {
     arguments?: string
     options?: string
     environment?: string
-    keeperSdk?: string
+    examples?: string
     seeAlso?: string
     note?: string
-    /** Append standard KeeperVault API overview (login, records, folders, …). */
-    appendVaultSurface?: boolean
 }
 
 export type CliCommandDefinition = {
