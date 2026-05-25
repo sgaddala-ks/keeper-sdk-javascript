@@ -37,12 +37,10 @@ export const syncCommand: CliCommandDefinition = {
     help: {
         title: 'sync — download vault data (syncDown)',
         synopsis: '  sync',
-        description: `  Calls KeeperVault.sync() → keeperapi syncDown to pull records, folders, and
-  related vault data into local storage. Requires an active session (login or restore-session).`,
+        description: `  Pulls records, folders, and related vault data into local storage.
+  Requires an active session (login or restore-session).`,
         options: '  --help, -h    Show this help.',
-        keeperSdk: '  KeeperVault.sync() → syncDown({ auth, storage })',
         seeAlso: '  restore-session --sync, records list, folders list',
-        appendVaultSurface: true,
     },
     async run(host, parsed) {
         if (wantsCliHelp(parsed)) {

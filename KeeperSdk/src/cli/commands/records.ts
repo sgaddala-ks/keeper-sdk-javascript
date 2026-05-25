@@ -17,10 +17,6 @@ export const recordsCommand: CliCommandDefinition = {
         description: '  Runs sync, then prints a table of record_uid and title for each record.',
         arguments: '  list    Optional; default behavior is to list. Other subcommands may be added later.',
         options: '  --help, -h    Show this help.',
-        keeperSdk: `  Maps to KeeperVault.sync(), getRecords(), getRecordTitle().
-  Related APIs you can extend in this CLI later: findRecords, getRecordsByType,
-  addRecord, updateRecord, deleteRecord, shareRecord, getRecordHistory, …`,
-        appendVaultSurface: true,
     },
     async run(host, parsed) {
         if (wantsCliHelp(parsed)) {
