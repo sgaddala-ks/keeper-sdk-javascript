@@ -24,8 +24,8 @@ export const registerDeviceCommand: CliCommandDefinition = {
         title: 'register-device — store device token and private key for session-token login',
         synopsis:
             '  register-device --device-token|--dt B64 --private-key|--pk B64 [--username|--user U]',
-        description: `  Calls KeeperVault.registerDevice to save device credentials for the current
-  host in this shell’s in-memory session. After this, you can run:
+        description: `  Saves device credentials for the current host in this shell’s in-memory
+  session. After this, you can run:
 
     login --username YOU --session-token TOKEN
 
@@ -40,8 +40,6 @@ export const registerDeviceCommand: CliCommandDefinition = {
         environment: `  REGISTER_DEVICE_TOKEN       Same as --device-token when flag omitted.
   REGISTER_DEVICE_PRIVATE_KEY Same as --private-key when flag omitted.
   KEEPER_HOST                 Same as other keeper commands.`,
-        keeperSdk: '  KeeperVault.registerDevice(deviceToken, privateKey, { username? })',
-        appendVaultSurface: true,
     },
     async run(host, parsed) {
         if (wantsCliHelp(parsed)) {

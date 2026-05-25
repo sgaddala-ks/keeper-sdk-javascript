@@ -146,13 +146,13 @@ export const restoreSessionCommand: CliCommandDefinition = {
         title: 'restore-session — restore SessionParams from extension / vault export',
         synopsis: `  restore-session --from-json session.json
   restore-session --session-token TOKEN --username U --account-uid B64 …`,
-        description: `  Loads a full keeperapi SessionParams snapshot and calls Auth.continueSession()
-  (same path as the browser extension after login). Use this when you have
-  accountUid, clientKey, dataKey, keys, sessionToken, username, etc. from
-  extension storage — not deviceToken/device private key.
+        description: `  Loads a full SessionParams snapshot and resumes the session (same path as
+  the browser extension after login). Use this when you have accountUid,
+  clientKey, dataKey, keys, sessionToken, username, etc. from extension storage
+  — deviceToken/device private key are not part of this payload.
 
   Provide parameters either as one JSON object (--from-json) or as flags / env.
-  Binary fields are base64 or base64url (same as normal64Bytes in keeperapi).`,
+  Binary fields are base64 or base64url.`,
         options: `  --from-json           Inline JSON (object or JSON-stringified object), or a file path
   The entire remainder of the command line is passed to JSON.parse (then file read if needed).
   --account-uid, --client-key, --data-key, --ecc-private-key, --ecc-public-key
@@ -168,7 +168,6 @@ export const restoreSessionCommand: CliCommandDefinition = {
   RESTORE_SESSION_ACCOUNT_UID       Per-field overrides (see --help flags)
   RESTORE_SESSION_SESSION_TOKEN
   … (RESTORE_SESSION_<FIELD> for each field above)`,
-        keeperSdk: '  KeeperVault.restoreSession(input) → SessionManager.saveSessionParameters + Auth.continueSession',
         note: '  sessionToken expires; region must match keeper-host / KEEPER_HOST.',
     },
     async run(host, parsed) {

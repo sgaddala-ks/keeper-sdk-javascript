@@ -1,5 +1,4 @@
 import type { CliCommandDefinition, CliHelpDoc } from './types'
-import { KEEPER_VAULT_SURFACE } from './vaultSurface'
 
 const SECTION_ORDER: (keyof CliHelpDoc)[] = [
     'synopsis',
@@ -7,7 +6,7 @@ const SECTION_ORDER: (keyof CliHelpDoc)[] = [
     'arguments',
     'options',
     'environment',
-    'keeperSdk',
+    'examples',
     'seeAlso',
     'note',
 ]
@@ -18,7 +17,7 @@ const SECTION_LABELS: Partial<Record<keyof CliHelpDoc, string>> = {
     arguments: 'ARGUMENTS',
     options: 'OPTIONS',
     environment: 'ENVIRONMENT',
-    keeperSdk: 'KEEPER SDK',
+    examples: 'EXAMPLES',
     seeAlso: 'SEE ALSO',
     note: 'NOTE',
 }
@@ -34,10 +33,6 @@ export function formatDetailedHelp(doc: CliHelpDoc): string {
             parts.push(label)
         }
         parts.push(body.trim())
-    }
-    if (doc.appendVaultSurface) {
-        parts.push('')
-        parts.push(KEEPER_VAULT_SURFACE)
     }
     return `${parts.join('\n')}\n`
 }
@@ -67,11 +62,7 @@ export function formatAllCommandsSummary(commands: readonly CliCommandDefinition
     for (const c of sorted) {
         out += `  ${c.name.padEnd(w)}  ${c.description}\n`
     }
-    out +=
-        '\nOptions use GNU-style syntax: `--name`, `--name=value`, short flags (`-p` or `-rf` when each letter is a switch), and `--` ends options.\n'
-    out += 'Quoted arguments and `\\` escapes are supported.\n\n'
-    out +=
-        'Run `help <command>` for a short summary, or `command --help` / `command -h` for full documentation.\n'
+    out += '\nRun `<command> --help` (or `-h`) for details on a specific command.\n'
     return out
 }
 
