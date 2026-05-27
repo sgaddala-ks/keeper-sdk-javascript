@@ -116,14 +116,7 @@ export async function loginWithSessionToken(
     }
 }
 
-/**
- * Returns success if a session is active. Otherwise emits a plain
- * "not logged in" error — no login flags or prompts. Commands that want
- * env-based auto-login should call runLoginCommand explicitly.
- *
- * Auto-login is preserved only when KEEPER_USERNAME is present in env;
- * runLoginCommand then handles password/session-token resolution.
- */
+/** Pass-through if logged in; auto-login when `KEEPER_USERNAME` is set; otherwise "not logged in". */
 export async function ensureLoggedIn(host: KeeperCliHost): Promise<CliResult> {
     if (host.getVault().isLoggedIn) {
         return { code: 0, out: '', err: '' }

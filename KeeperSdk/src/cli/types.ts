@@ -10,7 +10,7 @@ export type CliResult = {
     code: number
     out: string
     err: string
-    /** Login needs masked password from host UI (never in CLI line). */
+    /** Set when the host UI must prompt for a masked password (never on the CLI line). */
     needPassword?: boolean
     loginUsername?: string
 }
@@ -20,7 +20,7 @@ export type ParsedCli = {
     opts: Map<string, string | true>
 }
 
-/** Vault surface used by CLI command handlers. */
+/** Vault surface used by CLI command handlers. Folder methods are optional — commands check at runtime. */
 export type KeeperCliVault = {
     readonly isLoggedIn: boolean
     login(username: string, password: string): Promise<void>
@@ -31,7 +31,6 @@ export type KeeperCliVault = {
     getSharedFolders(): DSharedFolder[]
     registerDevice(deviceToken: string, privateKey: string, options?: { username?: string }): Promise<void>
     restoreSession(input: SessionRestoreInput): Promise<void>
-    /** Folder navigation. Optional so existing hosts keep compiling; commands check at runtime. */
     listFolder?: (options?: ListFolderOptions) => Promise<ListFolderResult>
     tree?: (options?: FolderTreeBuildOptions) => Promise<string>
     changeDirectory?: (path: string) => Promise<ChangeDirectoryResult>
@@ -41,12 +40,11 @@ export type KeeperCliVault = {
     mkdir?: (path: string, options?: MkdirOptions) => Promise<{ folderUid: string; success: boolean; message?: string }>
 }
 
-/** Host adapter (browser shell, Node Commander, tests). */
+/** Host adapter (browser shell, Node script, tests). `readTextFile` is optional. */
 export type KeeperCliHost = {
     getVault(): KeeperCliVault
     envString(name: string): string | undefined
     formatError(context: string, err: unknown): string
-    /** Read a local or remote text file (browser dev: Vite `/@fs/…` paths). */
     readTextFile?: (path: string) => Promise<string>
 }
 
@@ -70,7 +68,7 @@ export type CliCommandDefinition = {
     aliases?: readonly string[]
     subcommands?: readonly string[]
     flagOptions?: readonly string[]
-    /** If set, unknown options are rejected (excluding help). */
+    /** When set, options outside this set are rejected (`--help` / `-h` always allowed). */
     allowedOptions?: ReadonlySet<string>
     help: CliHelpDoc
     run: (host: KeeperCliHost, parsed: ParsedCli) => Promise<CliResult>

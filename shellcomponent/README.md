@@ -100,27 +100,14 @@ npm run dev
 
 Open the **`http://localhost:5175`** (or whatever port Vite prints) URL—**not** `file://`. The dev page is **`index.html`**; it loads **`src/dev-bootstrap.ts`**, which registers the shell.
 
-### Same-origin dev (in-browser SDK, no separate Node API)
-
-The dev page runs the **Keeper SDK in the browser** (no **`remote`** / **`api-base`**). Cross-origin calls to `keepersecurity.com` would fail CORS from `localhost`, so dev wires a **same-origin proxy**:
-
-1. **`installKeeperSameOriginProxy`** (in `dev-bootstrap.ts`) rewrites `fetch` / `WebSocket` URLs to  
-   `http://localhost:5175/__keeper/<host>/…` and `ws://localhost:5175/__keeper-wss/<host>/…`
-2. **`keeperSameOriginProxyPlugin`** (Vite) forwards those paths to the real Keeper HTTPS/WSS hosts.
-
-Only **`npm run dev`** is required. Example:
+The dev page runs the **Keeper SDK in the browser** (no `remote` / `api-base`). To avoid CORS, dev wires a **same-origin proxy** — see [`docs/SAME_ORIGIN_DEV.md`](docs/SAME_ORIGIN_DEV.md). Only `npm run dev` is needed.
 
 ```text
 restore-session --from-json /dev/keeper-session.json --sync
 records list
 ```
 
-Use an absolute path to repo `conf.json` if you prefer:  
-`restore-session --from-json /Users/you/.../keeper-sdk-javascript/conf.json --sync`
-
 Set region on the element when needed: `<web-console keeper-host="keepersecurity.eu">`.
-
-**Production:** your deployed origin must be allowed by Keeper’s CORS policy, or you host a trusted API and use **`remote`** + **`api-base`**. The Vite proxy is for **local dev only**.
 
 ```bash
 npm run build

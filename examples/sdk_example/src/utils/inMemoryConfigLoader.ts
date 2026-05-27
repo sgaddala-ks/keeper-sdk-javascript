@@ -1,6 +1,6 @@
 import type { ConfigLoader, KeeperJsonConfig } from '@keeper-security/keeper-sdk-javascript'
 
-/** In-memory session/device storage (same role as shellcomponent's InMemoryConfigLoader). */
+/** Process-lifetime session/device storage (no disk). */
 export class InMemoryConfigLoader implements ConfigLoader {
     public readonly configDir = ''
 

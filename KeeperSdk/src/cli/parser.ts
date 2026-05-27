@@ -5,22 +5,12 @@ import { RESTORE_SESSION_TRAILING_OPTS } from './commands/restoreSession'
 import { formatAllCommandsSummary, formatDetailedHelpForCommand, formatShortCommandSummary } from './help'
 
 export type KeeperCliParserOptions = {
-    /** Program name used in usage strings (default `keeper`). */
     prog?: string
-    /** One-line description shown above the command list. */
     description?: string
-    /** Footer printed after the auto-generated command list. */
     epilog?: string
 }
 
-/**
- * Self-contained CLI parser modelled on Python `argparse.ArgumentParser` + `add_subparsers()`.
- *
- * Add commands once, then call {@link parse} to dispatch a CLI line. `--help` (or `-h`) at the
- * top level lists every registered subcommand; `<command> --help` prints that command's full
- * help page. The parser owns its own command set so multiple parsers can coexist (useful for
- * embedding subsets of the CLI in tools, tests, or scoped UIs).
- */
+/** Self-contained CLI parser. Register commands, then `parse()` dispatches a line. */
 export class KeeperCliParser {
     private readonly prog: string
     private readonly description: string
@@ -34,7 +24,6 @@ export class KeeperCliParser {
         this.epilog = options.epilog
     }
 
-    /** Register one command (Commander/argparse `add_parser` equivalent). Returns `this` for chaining. */
     addCommand(def: CliCommandDefinition): this {
         const key = def.name.toLowerCase()
         this.commands.set(key, def)
@@ -46,13 +35,11 @@ export class KeeperCliParser {
         return this
     }
 
-    /** Register multiple commands at once. */
     addCommands(defs: Iterable<CliCommandDefinition>): this {
         for (const def of defs) this.addCommand(def)
         return this
     }
 
-    /** All registered commands, ordered by `order` then name (same rule as the global registry). */
     list(): CliCommandDefinition[] {
         return [...this.commands.values()].sort((a, b) => {
             const oa = a.order ?? 500
@@ -62,12 +49,10 @@ export class KeeperCliParser {
         })
     }
 
-    /** All registered command names, in `list()` order. */
     listNames(): string[] {
         return this.list().map((c) => c.name)
     }
 
-    /** Resolve a name (or alias) to a command definition. */
     resolve(name: string): CliCommandDefinition | undefined {
         const key = name.toLowerCase()
         if (this.commands.has(key)) return this.commands.get(key)
@@ -75,7 +60,6 @@ export class KeeperCliParser {
         return target ? this.commands.get(target) : undefined
     }
 
-    /** Top-level help text: parser description + every registered subcommand. */
     formatHelp(): string {
         const header = this.description ? `${this.prog} — ${this.description}\n\n` : ''
         const body = formatAllCommandsSummary(this.list())
@@ -83,28 +67,16 @@ export class KeeperCliParser {
         return header + body + footer
     }
 
-    /** Full help page for one subcommand (same content as `<command> --help`). */
     formatCommandHelp(name: string): string | null {
         const def = this.resolve(name)
         return def ? formatDetailedHelpForCommand(def) : null
     }
 
-    /** Short summary for one subcommand (single line + usage). */
     formatCommandSummary(name: string): string | null {
         const def = this.resolve(name)
         return def ? formatShortCommandSummary(def) : null
     }
 
-    /**
-     * Parse and dispatch a CLI line.
-     *
-     * Behaviour:
-     * - empty / whitespace → top-level help (no error)
-     * - `--help` / `-h` / `help` → top-level help
-     * - `--help <cmd>` / `help <cmd>` → that command's help page
-     * - `<cmd> --help` / `<cmd> -h` → that command's help page (handled before `def.run`)
-     * - `<cmd> [args]` → run `def.run(host, parsed)`
-     */
     async parse(line: string | readonly string[], host: KeeperCliHost): Promise<CliResult> {
         const { tokens, raw } = normalizeInput(line)
         if (tokens.length === 0) {
@@ -143,7 +115,7 @@ export class KeeperCliParser {
     }
 }
 
-/** Build a parser pre-loaded with the SDK's built-in commands (login, records, folders, …). */
+/** Parser pre-loaded with the SDK's built-in commands. */
 export function createKeeperCliParser(options: KeeperCliParserOptions = {}): KeeperCliParser {
     const parser = new KeeperCliParser(options)
     void loadBuiltinsInto(parser)

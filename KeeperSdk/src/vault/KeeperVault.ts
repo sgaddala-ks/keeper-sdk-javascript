@@ -275,12 +275,9 @@ export class KeeperVault {
     }
 
     /**
-     * Restore an existing Keeper session from extension-style {@link SessionRestoreInput}
-     * (maps to keeperapi `SessionParams` + `continueSession`). Does not run `loginV3` or require device keys.
-     *
-     * After restoring local state, this performs a lightweight server roundtrip
-     * (`account_summary`) to confirm the token is still valid. A 401 / expired
-     * token surfaces here instead of much later from `sync()`.
+     * Resume a session from extension-exported {@link SessionRestoreInput}.
+     * Verifies the token with a lightweight server call so an expired session
+     * fails here, not later from `sync()`.
      */
     public async restoreSession(input: SessionRestoreInput): Promise<void> {
         const params = toSessionParams(input)

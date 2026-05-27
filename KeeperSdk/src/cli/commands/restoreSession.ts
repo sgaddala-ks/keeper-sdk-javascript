@@ -8,7 +8,7 @@ import { getOpt, hasOpt, rejectUnknownOptions, wantsCliHelp } from '../parse'
 import { formatDetailedHelpForCommand } from '../help'
 import { runVaultSync } from './sync'
 
-/** Flags that may appear after `--from-json <value>` on the same line (stripped before parse/read). */
+/** Flags allowed to follow `--from-json <value>` on the same line. */
 export const RESTORE_SESSION_TRAILING_OPTS = [
     'sync',
     'account-uid',
