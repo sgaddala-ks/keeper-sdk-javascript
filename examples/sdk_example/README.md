@@ -68,19 +68,16 @@ npm run records:get
 
 Most examples will log in automatically using persistent login (if configured) or prompt for credentials. After authentication, follow the interactive prompts.
 
-**Restore-session flag** on `records:list` (requires `--from-json`; no default path). Uses the same SDK CLI dispatch as shellcomponent (`dispatchCliLine` → `restore-session`):
+**Restore-session** on `records:list` (requires `--from-json`):
 
 ```bash
-npm run records:list -- --restore-session --from-json /path/to/session.json
-npm run records:list -- --restore-session --from-json /path/to/session.json --host keepersecurity.eu
-npm run records:list -- --restore-session --from-json /path/to/session.json --no-sync
+npm run records:list -- --restore-session --from-json /path/to/session.json [--host keepersecurity.eu] [--no-sync]
 ```
 
-**Shell-parity debug** — restore and list only through CLI commands (closest match to typing in keeper-shell):
+**Shell-parity debug** — same dispatch path as `<keeper-shell>` (uses `dispatchCliLine` → `restore-session`):
 
 ```bash
-npm run records:list:shell-cli -- --from-json /path/to/session.json
-npm run records:list:shell-cli -- --from-json /path/to/session.json --host keepersecurity.eu
+npm run records:list:shell-cli -- --from-json /path/to/session.json [--host keepersecurity.eu]
 ```
 
-If Node succeeds but the browser shell fails, the difference is likely host I/O (`readTextFile` / Vite `/@fs`), CORS, or region (`keeper-host` / `KEEPER_HOST`), not `KeeperVault.restoreSession` itself.
+If Node works but the browser shell fails, suspect host I/O (`readTextFile` / Vite `/@fs`), CORS, or region — not `KeeperVault.restoreSession` itself.

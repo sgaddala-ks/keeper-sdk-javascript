@@ -1,4 +1,4 @@
-/** Dev-only: allow proxying to known Keeper infrastructure hosts. */
+/** Allowlist of Keeper infra hosts the dev proxy may forward to. */
 export function isAllowedKeeperProxyHost(host: string): boolean {
   if (!host || host.includes("..") || host.includes("/")) return false;
   if (/^push\.services\./.test(host)) {
