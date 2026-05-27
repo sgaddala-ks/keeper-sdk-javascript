@@ -3,12 +3,7 @@ import { runExample } from '../utils/runner'
 import { assertRestoreCliArgs, parseRestoreCliArgs, requireSessionJsonPath } from '../utils/restoreAuth'
 import { listRecordsViaShellCli, loginViaShellCliRestoreSession } from '../utils/shellCliRestore'
 
-/**
- * Debug script: restore + list entirely through SDK CLI dispatch (mirrors shellcomponent).
- *
- *   npm run records:list:shell-cli -- --from-json /path/to/session.json
- *   npm run records:list:shell-cli -- --from-json /path/to/session.json --host keepersecurity.eu
- */
+// npm run records:list:shell-cli -- --from-json /path/to/session.json [--host keepersecurity.eu]
 async function main() {
     const cli = parseRestoreCliArgs()
     if (!cli.restoreSession && !cli.jsonPath) {

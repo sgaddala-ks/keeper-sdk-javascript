@@ -15,10 +15,9 @@ import {
 } from './shellCliHost'
 
 export type ShellCliRestoreOptions = {
-    /** Resolved or raw path to session JSON (caller should validate). */
     jsonPath: string
     host?: string
-    /** Run `restore-session --sync` (default true). */
+    /** Defaults to true. */
     sync?: boolean
 }
 
@@ -43,9 +42,7 @@ function throwOnCliFailure(label: string, result: CliResult): void {
     )
 }
 
-/**
- * Authenticate via SDK `restore-session` CLI (same dispatch path as shellcomponent).
- */
+/** Authenticate via SDK `restore-session` CLI (same dispatch path as shellcomponent). */
 export async function loginViaShellCliRestoreSession(
     options: ShellCliRestoreOptions
 ): Promise<KeeperVault> {
