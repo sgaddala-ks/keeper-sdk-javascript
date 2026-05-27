@@ -13,7 +13,7 @@ type VaultInstance = KeeperVault
 let keeperHost: string | undefined
 let vault: VaultInstance | null = null
 
-/** Optional region/host override (shell: keeper-host / KEEPER_HOST). */
+/** Override region/host (mirrors shell's `keeper-host` / `KEEPER_HOST`). */
 export function setExampleKeeperHost(host: string | undefined): void {
     const trimmed = host?.trim()
     keeperHost = trimmed || undefined
@@ -44,7 +44,7 @@ function getVault(): VaultInstance {
     return vault
 }
 
-/** Underlying vault instance (for cleanup() after CLI dispatch). */
+/** Underlying vault (e.g. for `cleanup()` after CLI dispatch). */
 export function getExampleKeeperVault(): VaultInstance {
     return getVault()
 }
@@ -98,7 +98,7 @@ function envString(name: string): string | undefined {
     return typeof v === 'string' && v.length > 0 ? v : undefined
 }
 
-/** Node adapter matching shellcomponent/src/cli/keeperCliHost.ts (fs instead of Vite fetch). */
+/** Node `KeeperCliHost` (fs file-reads, no browser proxy). */
 export const exampleShellCliHost: KeeperCliHost = {
     getVault: () => asCliVault(getVault()),
     envString,

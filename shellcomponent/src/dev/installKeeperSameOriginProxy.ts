@@ -30,10 +30,7 @@ function rewriteKeeperUrl(url: string): string {
   }
 }
 
-/**
- * Dev-only: route Keeper REST/WebSocket through the Vite origin (`/__keeper/…`, `/__keeper-wss/…`).
- * SDK and CLI stay in the browser; Vite proxies to Keeper (same-origin from the page’s view).
- */
+/** Dev: rewrite Keeper fetch/WebSocket URLs to the same-origin Vite proxy prefixes. */
 export function installKeeperSameOriginProxy(): void {
   if (typeof window === "undefined") return;
 

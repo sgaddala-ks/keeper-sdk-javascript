@@ -2,10 +2,7 @@ import type { Plugin } from "vite";
 import httpProxy from "http-proxy";
 import { isAllowedKeeperProxyHost } from "../src/dev/keeperProxyHosts.js";
 
-/**
- * Vite dev server: forward same-origin `/__keeper/<host>/…` and `/__keeper-wss/<host>/…`
- * to real Keeper HTTPS/WSS endpoints (avoids browser CORS while SDK runs in-page).
- */
+/** Dev: proxy `/__keeper/<host>/…` (HTTPS) and `/__keeper-wss/<host>/…` (WSS) to Keeper. */
 export function keeperSameOriginProxyPlugin(): Plugin {
   const proxy = httpProxy.createProxyServer({
     changeOrigin: true,
