@@ -5,6 +5,15 @@ import type { FolderTreeBuildOptions } from '../folders/folderTree'
 import type { GetFolderOptions, GetFolderResult } from '../folders/getFolder'
 import type { ListFolderOptions, ListFolderResult } from '../folders/listFolder'
 import type { MkdirOptions } from '../folders/addFolder'
+import type { RenameFolderResult } from '../folders/updateFolder'
+import type { DeleteFolderResult } from '../folders/deleteFolder'
+import type { ListSharedFolderRow, ListSharedFoldersOptions } from '../sharedFolders/listSharedFolders'
+import type { ListTeamRow, ListTeamsOptions } from '../teams/listTeams'
+import type { TeamView } from '../teams/viewTeam'
+import type { ListUserRow, ListUsersOptions } from '../users/userTypes'
+import type { UserView } from '../users/userTypes'
+import type { RecordShareInfo } from '../sharing/Sharing'
+import type { VaultSummary } from '../vault/KeeperVault'
 
 export type CliResult = {
     code: number
@@ -20,7 +29,10 @@ export type ParsedCli = {
     opts: Map<string, string | true>
 }
 
-/** Vault surface used by CLI command handlers. Folder methods are optional — commands check at runtime. */
+/**
+ * Vault surface for CLI handlers. Methods beyond session/sync/records are optional;
+ * commands call `ensureCapability` so thin hosts fail with a clear message.
+ */
 export type KeeperCliVault = {
     readonly isLoggedIn: boolean
     login(username: string, password: string): Promise<void>
@@ -31,6 +43,11 @@ export type KeeperCliVault = {
     getSharedFolders(): DSharedFolder[]
     registerDevice(deviceToken: string, privateKey: string, options?: { username?: string }): Promise<void>
     restoreSession(input: SessionRestoreInput): Promise<void>
+    getSummary?: () => VaultSummary
+    findRecord?: (uidOrTitle: string) => DRecord | undefined
+    findRecords?: (criteria: string) => DRecord[]
+    getRecordShareInfo?: (recordUid: string) => Promise<RecordShareInfo | null>
+    listSharedFolders?: (options?: ListSharedFoldersOptions) => ListSharedFolderRow[]
     listFolder?: (options?: ListFolderOptions) => Promise<ListFolderResult>
     tree?: (options?: FolderTreeBuildOptions) => Promise<string>
     changeDirectory?: (path: string) => Promise<ChangeDirectoryResult>
@@ -38,6 +55,12 @@ export type KeeperCliVault = {
     getWorkingFolderDisplayName?: () => string
     getFolder?: (uidOrName: string, options?: GetFolderOptions) => Promise<GetFolderResult>
     mkdir?: (path: string, options?: MkdirOptions) => Promise<{ folderUid: string; success: boolean; message?: string }>
+    renameFolder?: (folderPath: string, newName: string) => Promise<RenameFolderResult>
+    rmdir?: (patterns: string[], options?: { force?: boolean }) => Promise<DeleteFolderResult>
+    listTeams?: (options?: ListTeamsOptions) => Promise<ListTeamRow[]>
+    viewTeam?: (identifier: string) => Promise<TeamView>
+    listUsers?: (options?: ListUsersOptions) => Promise<ListUserRow[]>
+    viewUser?: (identifier: string) => Promise<UserView>
 }
 
 /** Host adapter (browser shell, Node script, tests). `readTextFile` is optional. */

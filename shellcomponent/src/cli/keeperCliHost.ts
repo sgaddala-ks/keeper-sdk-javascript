@@ -64,13 +64,9 @@ function formatKeeperClientError(context: string, e: unknown): string {
     : `\n  Region/host: default production (US). EU/AU/CA/JP tenants often need keeper-host on <web-console> or KEEPER_HOST.`;
   return (
     `${context}: ${base}\n` +
-    `  Why only this text: browsers intentionally hide the underlying HTTP status / CORS detail for many failed requests.\n` +
-    `  Typical causes (your password may still be correct):\n` +
-    `  • CORS — Keeper’s API may not allow calls from this page’s origin (common for http://localhost in dev).\n` +
-    `  • Network — offline, DNS, VPN, corporate proxy, or firewall blocking HTTPS to Keeper.\n` +
-    `  • Mixed content — page is http while the API is https; load the dev page over https.\n` +
+    `  Browser could not reach Keeper (CORS, network, or wrong region).` +
     hostHint +
-    `\n  Mitigation: run login from a backend your page trusts (set web-console remote + api-base), or use the SDK from Node.js.\n`
+    `\n  Dev: run shellcomponent with \`npm run dev\` (same-origin proxy). Prod: set keeper-host or use remote + api-base.\n`
   );
 }
 
@@ -87,6 +83,11 @@ function asCliVault(v: VaultInstance): KeeperCliVault {
     getSharedFolders: () => v.getSharedFolders(),
     registerDevice: (dt, pk, o) => v.registerDevice(dt, pk, o),
     restoreSession: (input) => v.restoreSession(input),
+    getSummary: () => v.getSummary(),
+    findRecord: (uidOrTitle) => v.findRecord(uidOrTitle),
+    findRecords: (criteria) => v.findRecords(criteria),
+    getRecordShareInfo: (uid) => v.getRecordShareInfo(uid),
+    listSharedFolders: (options) => v.listSharedFolders(options),
     listFolder: (options) => v.listFolder(options),
     tree: (options) => v.tree(options),
     changeDirectory: (path) => v.changeDirectory(path),
@@ -94,6 +95,12 @@ function asCliVault(v: VaultInstance): KeeperCliVault {
     getWorkingFolderDisplayName: () => v.getWorkingFolderDisplayName(),
     getFolder: (uidOrName, options) => v.getFolder(uidOrName, options),
     mkdir: (path, options) => v.mkdir(path, options),
+    renameFolder: (path, name) => v.renameFolder(path, name),
+    rmdir: (patterns, options) => v.rmdir(patterns, options),
+    listTeams: (options) => v.listTeams(options),
+    viewTeam: (id) => v.viewTeam(id),
+    listUsers: (options) => v.listUsers(options),
+    viewUser: (id) => v.viewUser(id),
   };
 }
 

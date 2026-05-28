@@ -135,6 +135,12 @@ function loadBuiltinsInto(parser: KeeperCliParser): void {
         restoreSessionCommand,
     } = require('./commands/restoreSession') as typeof import('./commands/restoreSession')
     const { syncCommand } = require('./commands/sync') as typeof import('./commands/sync')
+    const { vaultCommand } = require('./commands/vault') as typeof import('./commands/vault')
+    const {
+        sharedFoldersCommand,
+    } = require('./commands/sharedFolders') as typeof import('./commands/sharedFolders')
+    const { teamsCommand } = require('./commands/teams') as typeof import('./commands/teams')
+    const { usersCommand } = require('./commands/users') as typeof import('./commands/users')
 
     parser.addCommands([
         helpCommand,
@@ -142,8 +148,12 @@ function loadBuiltinsInto(parser: KeeperCliParser): void {
         registerDeviceCommand,
         restoreSessionCommand,
         syncCommand,
+        vaultCommand,
         recordsCommand,
         foldersCommand,
+        sharedFoldersCommand,
+        teamsCommand,
+        usersCommand,
         logoutCommand,
     ])
 }

@@ -47,6 +47,11 @@ export function completeCliLine(line: string): {
 export function setShellCliContext(next: ShellCliContext): void;
 export function resetShellVault(): void;
 export function loginWithCredentials(username: string, password: string): Promise<CliResult>;
+export function loginWithSessionToken(
+  username: string,
+  sessionToken: string,
+  options?: { plainToken?: boolean }
+): Promise<CliResult>;
 
 declare global {
   interface HTMLElementTagNameMap {

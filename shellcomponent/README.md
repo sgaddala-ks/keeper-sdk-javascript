@@ -77,9 +77,31 @@ If TypeScript complains about unknown intrinsic elements, extend **`JSX.Intrinsi
 
 Boolean attributes follow HTML rules: include the attribute name to enable, omit to disable.
 
+## CLI commands (in-browser)
+
+The shell dispatches the Keeper SDK CLI (`dispatchCliLine`). Built-in commands include:
+
+| Command | Purpose |
+|---------|---------|
+| `help` | List commands or show help for one |
+| `login` / `logout` | Authenticate (password via masked prompt; never on the CLI line) |
+| `register-device` | Store device token + key for session-token login |
+| `restore-session` | Resume from extension session JSON (`--from-json`) |
+| `sync` | Vault sync |
+| `vault summary` | Record / folder / team counts |
+| `records` | `list`, `get`, `find`, `share-info` |
+| `folders` | `list`, `tree`, `ls`, `pwd`, `cd`, `mkdir`, `rename`, `rmdir`, `get` |
+| `shared-folders` | Shared folders with optional `--verbose` counts |
+| `teams` | Enterprise `list`, `view` |
+| `users` | Enterprise `list`, `view` |
+
+Use `<command> --help` for full docs. Tab completes command names, subcommands, and flags.
+
+Write/mutate operations (add/update/delete users or teams, share record, etc.) are available on `KeeperVault` in code; CLI coverage focuses on list/get/view flows usable from the shell.
+
 ## Programmatic API (optional)
 
-The package also exports helpers used by the shell (CLI dispatch, completion, vault helpers). See **`keeper-shell.d.ts`** and **`src/index.ts`** for **`dispatchCliLine`**, **`completeCliLine`**, **`setShellCliContext`**, **`resetShellVault`**, **`loginWithCredentials`**, and the **`KeeperShell`** / **`WebConsoleElement`** classes.
+The package also exports helpers used by the shell (CLI dispatch, completion, vault helpers). See **`keeper-shell.d.ts`** and **`src/index.ts`** for **`dispatchCliLine`**, **`completeCliLine`**, **`setShellCliContext`**, **`resetShellVault`**, **`loginWithCredentials`**, **`loginWithSessionToken`**, and the **`KeeperShell`** / **`WebConsoleElement`** classes.
 
 ## Layout note (non-embed)
 

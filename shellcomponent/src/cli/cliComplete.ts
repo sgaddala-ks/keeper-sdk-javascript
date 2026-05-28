@@ -1,5 +1,5 @@
 /**
- * Tab-completion metadata for the keeper-shell CLI (from SDK command registry).
+ * Tab-completion for keeper-shell (SDK command registry).
  */
 import { getCliCommand, listCliCommandNames } from "@keeper-security/keeper-sdk-javascript";
 
@@ -47,19 +47,38 @@ export function completeCliLine(line: string): CliCompleteResult {
   }
 
   const cmd = lc(words[0]);
+  const def = getCliCommand(cmd);
 
   if (words.length === 1) {
     if (stub.startsWith("-")) {
       const hits = flagsFor(cmd).filter((f) => lc(f).startsWith(stubLc));
       return { base: baseFor(stub.length), candidates: [...hits] };
     }
-    const subs = getCliCommand(cmd)?.subcommands;
+    const subs = def?.subcommands;
     if (subs?.length) {
       const hits = subs.filter((s) => lc(s).startsWith(stubLc));
-      return { base: baseFor(stub.length), candidates: [...hits] };
+      if (hits.length > 0) {
+        return { base: baseFor(stub.length), candidates: [...hits] };
+      }
     }
     if (completesNewWord || stub.length > 0) {
       const hits = flagsFor(cmd).filter((f) => lc(f).startsWith(stubLc));
+      return { base: baseFor(stub.length), candidates: [...hits] };
+    }
+  }
+
+  if (words.length >= 2 && def?.subcommands) {
+    const subLc = lc(words[1]);
+    const knownSub = def.subcommands.some((s) => lc(s) === subLc);
+    if (knownSub && (stub.startsWith("-") || completesNewWord)) {
+      const hits = flagsFor(cmd).filter((f) => lc(f).startsWith(stubLc));
+      return { base: baseFor(stub.length), candidates: [...hits] };
+    }
+  }
+
+  if (words.length >= 2 && !def?.subcommands && (stub.startsWith("-") || completesNewWord)) {
+    const hits = flagsFor(cmd).filter((f) => lc(f).startsWith(stubLc));
+    if (hits.length > 0) {
       return { base: baseFor(stub.length), candidates: [...hits] };
     }
   }
