@@ -1,42 +1,12 @@
 import type { DSharedFolder } from '@keeper-security/keeperapi'
-import type { CliCommandDefinition, CliResult, KeeperCliHost, KeeperCliVault, ParsedCli } from '../types'
+import type { CliCommandDefinition, CliResult, KeeperCliHost, ParsedCli } from '../types'
 import { hasOpt, wantsCliHelp } from '../parse'
 import { formatDetailedHelpForCommand } from '../help'
-import { ensureLoggedIn } from './login'
+import { ensureCapability, ensureSession } from '../commandHelpers'
+import { formatTable } from '../table'
 
-const SUBCOMMANDS = ['list', 'tree', 'ls', 'pwd', 'cd', 'mkdir', 'get'] as const
+const SUBCOMMANDS = ['list', 'tree', 'ls', 'pwd', 'cd', 'mkdir', 'rename', 'rmdir', 'get'] as const
 type Sub = (typeof SUBCOMMANDS)[number]
-
-function ensureCapability<K extends keyof KeeperCliVault>(
-    v: KeeperCliVault,
-    name: K,
-    sub: string
-): CliResult | null {
-    if (typeof v[name] !== 'function') {
-        return {
-            code: 1,
-            out: '',
-            err: `folders ${sub}: this host does not expose KeeperCliVault.${String(name)}.\n`,
-        }
-    }
-    return null
-}
-
-async function ensureSession(host: KeeperCliHost): Promise<CliResult | null> {
-    const v = host.getVault()
-    if (v.isLoggedIn) return null
-    const r = await ensureLoggedIn(host)
-    return r.code === 0 ? null : r
-}
-
-/** Fixed-width column formatter. Last column is left unpadded so trailing whitespace is avoided. */
-function formatTable(headers: string[], rows: string[][]): string {
-    if (rows.length === 0) return ''
-    const widths = headers.map((h, i) => Math.max(h.length, ...rows.map((r) => (r[i] ?? '').length)))
-    const fmt = (cells: string[]): string =>
-        cells.map((s, i) => (i === cells.length - 1 ? s : (s ?? '').padEnd(widths[i]))).join('  ')
-    return [fmt(headers), ...rows.map(fmt)].join('\n') + '\n'
-}
 
 async function runListShared(host: KeeperCliHost): Promise<CliResult> {
     const r = await ensureSession(host)
@@ -178,6 +148,53 @@ async function runMkdir(host: KeeperCliHost, parsed: ParsedCli): Promise<CliResu
     }
 }
 
+async function runRename(host: KeeperCliHost, parsed: ParsedCli): Promise<CliResult> {
+    const path = parsed.positional[1]
+    const newName = parsed.positional[2]
+    if (!path || !newName) {
+        return {
+            code: 1,
+            out: '',
+            err: 'folders rename: usage: folders rename <path> <new-name>\n',
+        }
+    }
+    const r = await ensureSession(host)
+    if (r) return r
+    const v = host.getVault()
+    const cap = ensureCapability(v, 'renameFolder', 'folders rename')
+    if (cap) return cap
+    try {
+        const res = await v.renameFolder!(path, newName)
+        if (!res.success) {
+            return { code: 1, out: '', err: `folders rename: ${res.message ?? 'failed'}\n` }
+        }
+        return { code: 0, out: `renamed ${path} → ${newName}\n`, err: '' }
+    } catch (e) {
+        return { code: 1, out: '', err: host.formatError(`folders rename ${path}`, e) }
+    }
+}
+
+async function runRmdir(host: KeeperCliHost, parsed: ParsedCli): Promise<CliResult> {
+    const pattern = parsed.positional[1]
+    if (!pattern) {
+        return { code: 1, out: '', err: 'folders rmdir: missing path. Usage: folders rmdir <path>\n' }
+    }
+    const r = await ensureSession(host)
+    if (r) return r
+    const v = host.getVault()
+    const cap = ensureCapability(v, 'rmdir', 'folders rmdir')
+    if (cap) return cap
+    try {
+        const res = await v.rmdir!([pattern])
+        if (!res.success) {
+            return { code: 1, out: '', err: `folders rmdir: ${res.message ?? 'failed'}\n` }
+        }
+        return { code: 0, out: `removed ${pattern}\n`, err: '' }
+    } catch (e) {
+        return { code: 1, out: '', err: host.formatError(`folders rmdir ${pattern}`, e) }
+    }
+}
+
 async function runGet(host: KeeperCliHost, parsed: ParsedCli): Promise<CliResult> {
     const target = parsed.positional[1]
     if (!target) return { code: 1, out: '', err: 'folders get: missing UID or name. Usage: folders get <uid|name>\n' }
@@ -198,8 +215,8 @@ async function runGet(host: KeeperCliHost, parsed: ParsedCli): Promise<CliResult
 export const foldersCommand: CliCommandDefinition = {
     name: 'folders',
     order: 31,
-    description: 'List/navigate vault folders (list, tree, ls, pwd, cd, mkdir, get).',
-    usage: 'folders [list|tree|ls|pwd|cd|mkdir|get] [args] [--help|-h]',
+    description: 'List/navigate vault folders (list, tree, ls, pwd, cd, mkdir, rename, rmdir, get).',
+    usage: 'folders [list|tree|ls|pwd|cd|mkdir|rename|rmdir|get] [args] [--help|-h]',
     subcommands: [...SUBCOMMANDS],
     flagOptions: ['--shared', '--detail'],
     help: {
@@ -210,6 +227,8 @@ export const foldersCommand: CliCommandDefinition = {
   folders pwd                       Print current working folder display name
   folders cd PATH                   Change current folder
   folders mkdir PATH [--shared]     Create a user (or shared) folder
+  folders rename PATH NEW_NAME      Rename a folder
+  folders rmdir PATH                Delete a folder
   folders get UID|NAME              Print folder details as JSON`,
         description: `  Folder navigation maintained per-shell. The current folder affects
   subsequent ls, mkdir, and other folder-relative operations.
@@ -225,6 +244,8 @@ export const foldersCommand: CliCommandDefinition = {
   pwd       Print the current working folder.
   cd PATH   Change current folder. "/" returns to root.
   mkdir PATH [--shared]   Create a folder. --shared makes it a shared folder.
+  rename PATH NEW_NAME    Rename a folder under cwd or by path.
+  rmdir PATH              Delete a folder (by path or name).
   get UID|NAME            Print folder metadata as JSON.`,
         options: `  --detail        ls only: include flags, record types, ownership.
   --shared        mkdir only: create a shared folder instead of a user folder.
@@ -264,6 +285,10 @@ export const foldersCommand: CliCommandDefinition = {
                     return await runCd(host, parsed)
                 case 'mkdir':
                     return await runMkdir(host, parsed)
+                case 'rename':
+                    return await runRename(host, parsed)
+                case 'rmdir':
+                    return await runRmdir(host, parsed)
                 case 'get':
                     return await runGet(host, parsed)
             }

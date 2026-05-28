@@ -1086,8 +1086,11 @@ export class KeeperShell extends HTMLElement {
     const remote = this._remoteApiPrefix();
     if (remote === null) {
       term.writeln("\x1b[1mWeb console\x1b[0m — commands run in this browser (Keeper SDK + CLI).");
+      term.writeln(
+        "Type `help` — records, folders, shared-folders, teams, users, vault summary (see each COMMAND --help)."
+      );
       term.writeln("Tab completion and masked password entry are handled locally.");
-      term.writeln("Optional: `keeper-host` attribute for vault region.");
+      term.writeln("Optional: `keeper-host` attribute (or VITE_KEEPER_HOST) for vault region.");
     } else {
       term.writeln("\x1b[1mWeb console\x1b[0m — commands execute on your backend API.");
       term.writeln(

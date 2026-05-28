@@ -14,10 +14,13 @@ export async function loginWithCredentials(username: string, password: string): 
   return sdkLoginWithCredentials(shellKeeperCliHost, username, password);
 }
 
-export async function loginWithSessionTokenCredentials(
+export async function loginWithSessionToken(
   username: string,
   sessionToken: string,
   options?: { plainToken?: boolean }
 ): Promise<CliResult> {
   return sdkLoginWithSessionToken(shellKeeperCliHost, username, sessionToken, options);
 }
+
+/** @deprecated Use {@link loginWithSessionToken}. */
+export const loginWithSessionTokenCredentials = loginWithSessionToken;
