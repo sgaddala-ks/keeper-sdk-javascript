@@ -104,7 +104,15 @@ import type {
     TeamUserResult,
     FormattedTeamUserTable,
 } from '../users/userTypes'
-import { ConsoleLogger, LogLevel, KeeperSdkError, extractErrorMessage, SdkDefaults, ResultCodes } from '../utils'
+import {
+    ConsoleLogger,
+    LogLevel,
+    KeeperSdkError,
+    extractErrorMessage,
+    extractResultCode,
+    SdkDefaults,
+    ResultCodes,
+} from '../utils'
 import type { ILogger } from '../utils'
 
 enum VaultStatus {
