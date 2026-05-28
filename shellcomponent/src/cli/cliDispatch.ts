@@ -1,7 +1,11 @@
-import "./mkdirCommand.js";
-import { dispatchCliLine as sdkDispatchCliLine } from "@keeper-security/keeper-sdk-javascript";
+import {
+  dispatchCliLine as sdkDispatchCliLine,
+  ensureKeeperCliRegistry,
+} from "@keeper-security/keeper-sdk-javascript";
 import { shellKeeperCliHost } from "./keeperCliHost.js";
 import type { CliResult } from "./types.js";
+
+ensureKeeperCliRegistry();
 
 const rawMax =
   typeof process !== "undefined" && process.env?.CLI_MAX_LINE_LENGTH

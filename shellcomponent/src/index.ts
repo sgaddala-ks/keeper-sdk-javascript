@@ -14,4 +14,8 @@ export { completeCliLine } from "./cli/cliComplete.js";
 export type { CliResult } from "./cli/types.js";
 export type { ShellCliContext } from "./cli/cliContext.js";
 export { setShellCliContext } from "./cli/cliContext.js";
-export { resetShellVault, loginWithCredentials } from "./cli/keeperCommands.js";
+export {
+  resetShellVault,
+  loginWithCredentials,
+  loginWithSessionToken,
+} from "./cli/keeperCommands.js";

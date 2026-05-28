@@ -6,7 +6,11 @@ import { logoutCommand } from './commands/logout'
 import { recordsCommand } from './commands/records'
 import { registerDeviceCommand } from './commands/registerDevice'
 import { restoreSessionCommand } from './commands/restoreSession'
+import { sharedFoldersCommand } from './commands/sharedFolders'
 import { syncCommand } from './commands/sync'
+import { teamsCommand } from './commands/teams'
+import { usersCommand } from './commands/users'
+import { vaultCommand } from './commands/vault'
 
 let registryInitialized = false
 
@@ -19,8 +23,12 @@ export function ensureKeeperCliRegistry(): void {
     registerCliCommand(registerDeviceCommand)
     registerCliCommand(restoreSessionCommand)
     registerCliCommand(syncCommand)
+    registerCliCommand(vaultCommand)
     registerCliCommand(recordsCommand)
     registerCliCommand(foldersCommand)
+    registerCliCommand(sharedFoldersCommand)
+    registerCliCommand(teamsCommand)
+    registerCliCommand(usersCommand)
     registerCliCommand(logoutCommand)
 }
 
@@ -85,6 +93,10 @@ export {
 export { runLogoutCommand, logoutCommand } from './commands/logout'
 export { recordsCommand } from './commands/records'
 export { foldersCommand } from './commands/folders'
+export { sharedFoldersCommand } from './commands/sharedFolders'
+export { teamsCommand } from './commands/teams'
+export { usersCommand } from './commands/users'
+export { vaultCommand } from './commands/vault'
 export { registerDeviceCommand } from './commands/registerDevice'
 export { helpCommand } from './commands/help'
 export { restoreSessionCommand } from './commands/restoreSession'
