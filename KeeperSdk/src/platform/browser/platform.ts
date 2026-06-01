@@ -5,20 +5,23 @@ import type { ConfigLoader } from '../../auth/config'
 import * as asmCrypto from 'asmcrypto.js'
 import type { SdkPlatform, SdkReadline } from '../types'
 
-type AsmCryptoModule = typeof asmCrypto & {
-    HMAC: { sign: (data: Uint8Array, key: Uint8Array, hash: unknown) => Uint8Array }
-    SHA1: unknown
-    SHA256: unknown
-    SHA512: unknown
+type HmacCtor = new (key: Uint8Array) => {
+    process(data: Uint8Array): void
+    finish(): void
+    result: Uint8Array
 }
 
-const asm = asmCrypto as AsmCryptoModule
+const asm = asmCrypto as typeof asmCrypto & {
+    HmacSha1: HmacCtor
+    HmacSha256: HmacCtor
+    HmacSha512: HmacCtor
+}
 
-const HMAC_HASH = {
-    sha1: asm.SHA1,
-    sha256: asm.SHA256,
-    sha512: asm.SHA512,
-} as const
+const HMAC_IMPL: Record<'sha1' | 'sha256' | 'sha512', HmacCtor> = {
+    sha1: asm.HmacSha1,
+    sha256: asm.HmacSha256,
+    sha512: asm.HmacSha512,
+}
 
 const BROWSER_READLINE_MSG =
     'Interactive readline is not available in the browser. Use keeper-shell password transport or a custom authUI.'
@@ -47,11 +50,14 @@ export const browserSdkPlatform: SdkPlatform = {
     },
 
     hmac(algorithm, key, data) {
-        const hash = HMAC_HASH[algorithm]
-        if (!hash) {
+        const Ctor = HMAC_IMPL[algorithm]
+        if (!Ctor) {
             throw new KeeperSdkError(`Unsupported HMAC algorithm: ${algorithm}`, ResultCodes.UNSUPPORTED_2FA_CHANNEL)
         }
-        return asm.HMAC.sign(data, key, hash)
+        const h = new Ctor(key)
+        h.process(data)
+        h.finish()
+        return h.result
     },
 
     createFileConfigLoader(): ConfigLoader {
