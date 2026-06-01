@@ -11,34 +11,22 @@ export const KEEPER_SHELL_TAG = "keeper-shell";
 /** Legacy custom element name (same behavior as {@link KEEPER_SHELL_TAG}). */
 export const WEB_CONSOLE_TAG = "web-console";
 
-const ATTR_API_BASE = "api-base";
 const ATTR_KEEPER_HOST = "keeper-host";
 const ATTR_COLLAPSED = "collapsed";
 const ATTR_HEIGHT = "height";
-/** When set, CLI uses HTTP (POST `${apiBase}/cli`, …). Omitted = in-browser Keeper SDK (default for prod FE). */
-const ATTR_REMOTE = "remote";
-/** @deprecated Prefer default in-browser mode; `local` removes the `remote` attribute when set via property. */
-const ATTR_LOCAL = "local";
 /** Full in-page terminal only (no show/hide button). */
 const ATTR_EMBED = "embed";
 /** When set, each new `$ ` prompt starts with masked input (`*` display). Toggle with Ctrl+O. */
 const ATTR_MASK_INPUT = "mask-input";
 
-/** Same as legacy `<web-console>`: default `/api` when attribute is missing. */
-function normalizeApiBase(raw: string | null): string {
-  const s = (raw ?? "/api").trim() || "/api";
-  return s.replace(/\/$/, "") || "/api";
-}
-
-/** Resolved at build time; change `../icon.jpg` if the asset moves. */
-const CONSOLE_TOGGLE_ICON_URL = new URL("../icon.jpg", import.meta.url).href;
-
-/** Same bitmap for both states; `aria-label` / `title` reflect expand vs collapse. */
+/** Same icon for both states; `aria-label` / `title` reflect expand vs collapse. */
 function setConsoleToggleButtonUi(btn: HTMLButtonElement, collapsed: boolean): void {
   const label = collapsed ? "Open console" : "Hide console";
   btn.setAttribute("aria-label", label);
   btn.title = label;
-  btn.innerHTML = `<img class="wc-toggle-icon" src="${CONSOLE_TOGGLE_ICON_URL}" alt="" width="22" height="22" decoding="async" draggable="false" />`;
+  btn.innerHTML =
+    '<svg class="wc-toggle-icon" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" focusable="false">' +
+    '<path fill="currentColor" d="M4 17v2h16v-2H4zm0-5v2h16v-2H4zm0-5v2h16V7H4z"/></svg>';
 }
 
 type CliResponse = {
@@ -51,36 +39,6 @@ type CliResponse = {
 };
 
 type CompleteResponse = { base?: unknown; candidates?: unknown };
-
-const REMOTE_ERROR_BODY_MAX = 2000;
-
-/** Parse JSON from a remote CLI response; otherwise return a text preview (e.g. HTML 500 page). */
-async function readRemoteJsonBody<T extends object = CliResponse>(res: Response): Promise<
-  { kind: "json"; data: T } | { kind: "plain"; preview: string }
-> {
-  const raw = await res.text();
-  const t = raw.trim();
-  if (t.length === 0) {
-    return { kind: "json", data: {} as T };
-  }
-  try {
-    return { kind: "json", data: JSON.parse(t) as T };
-  } catch {
-    const preview =
-      raw.length > REMOTE_ERROR_BODY_MAX ? raw.slice(0, REMOTE_ERROR_BODY_MAX) + "\n… (truncated)" : raw;
-    return { kind: "plain", preview };
-  }
-}
-
-const JSON_HEADERS = {
-  "Content-Type": "application/json",
-  Accept: "application/json",
-} as const;
-
-/** JSON body for POST …/cli and …/cli/complete (`command` mirrors common server field names). */
-function remoteCliExecuteBody(line: string): string {
-  return JSON.stringify({ line, command: line });
-}
 
 function formatErr(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
@@ -185,12 +143,9 @@ function feedInput(chunk: string, carry: { s: string }): InputTok[] {
 
 export class KeeperShell extends HTMLElement {
   static observedAttributes = [
-    ATTR_API_BASE,
     ATTR_KEEPER_HOST,
     ATTR_COLLAPSED,
     ATTR_HEIGHT,
-    ATTR_REMOTE,
-    ATTR_LOCAL,
     ATTR_EMBED,
     ATTR_MASK_INPUT,
   ];
@@ -204,23 +159,13 @@ export class KeeperShell extends HTMLElement {
   private _started = false;
   private _completing = false;
   private _inputListeners: AbortController | null = null;
+  /** Last `keeper-host` synced to {@link resetShellVault}; `undefined` = never synced. */
+  private _syncedKeeperHostKey: string | undefined;
 
   constructor() {
     super();
     // Lets the browser delegate focus to the xterm textarea inside shadow (keyboard input).
     this.attachShadow({ mode: "open", delegatesFocus: true });
-  }
-
-  /**
-   * Base URL for CLI HTTP transport (no trailing slash). POST `${apiBase}/cli`, etc.
-   * Default `/api` when the attribute is omitted (legacy web-console behavior).
-   */
-  get apiBase(): string {
-    return normalizeApiBase(this.getAttribute(ATTR_API_BASE));
-  }
-
-  set apiBase(v: string) {
-    this.setAttribute(ATTR_API_BASE, (v && v.trim()) || "/api");
   }
 
   get keeperHost(): string {
@@ -250,31 +195,6 @@ export class KeeperShell extends HTMLElement {
     else this.removeAttribute(ATTR_MASK_INPUT);
   }
 
-  /**
-   * When set, CLI uses HTTP: POST `${apiBase}/cli`, etc.
-   * When omitted (default), input is handled in-browser (parser + Keeper SDK).
-   */
-  get remote(): boolean {
-    return this.hasAttribute(ATTR_REMOTE);
-  }
-
-  set remote(v: boolean) {
-    if (v) this.setAttribute(ATTR_REMOTE, "");
-    else this.removeAttribute(ATTR_REMOTE);
-  }
-
-  /**
-   * @deprecated Use {@link remote} instead. `local === !remote` (setting `local` removes `remote`).
-   */
-  get local(): boolean {
-    return !this.remote;
-  }
-
-  set local(v: boolean) {
-    if (v) this.removeAttribute(ATTR_REMOTE);
-    else this.setAttribute(ATTR_REMOTE, "");
-  }
-
   /** Browser CLI layout: terminal fills the element; no collapsible chrome. */
   get embed(): boolean {
     return this.hasAttribute(ATTR_EMBED);
@@ -285,24 +205,15 @@ export class KeeperShell extends HTMLElement {
     else this.removeAttribute(ATTR_EMBED);
   }
 
-  private _isLocal(): boolean {
-    return !this.hasAttribute(ATTR_REMOTE);
-  }
-
   private _isEmbed(): boolean {
     return this.hasAttribute(ATTR_EMBED);
   }
 
-  /** `null` → in-browser CLI; else HTTP prefix (default `/api`). */
-  private _remoteApiPrefix(): string | null {
-    if (this._isLocal()) return null;
-    return normalizeApiBase(this.getAttribute(ATTR_API_BASE));
-  }
-
   private _syncShellContext(): void {
-    const h = this.getAttribute(ATTR_KEEPER_HOST)?.trim();
+    const h = this.getAttribute(ATTR_KEEPER_HOST)?.trim() || "";
     setShellCliContext({ keeperHost: h || undefined });
-    if (this._isLocal()) {
+    if (this._syncedKeeperHostKey !== h) {
+      this._syncedKeeperHostKey = h;
       resetShellVault();
     }
   }
@@ -315,8 +226,7 @@ export class KeeperShell extends HTMLElement {
     if (name === ATTR_KEEPER_HOST) {
       this._syncShellContext();
     }
-    if (name === ATTR_EMBED || name === ATTR_LOCAL || name === ATTR_REMOTE) {
-      if (name === ATTR_LOCAL || name === ATTR_REMOTE) this._syncShellContext();
+    if (name === ATTR_EMBED) {
       const shouldShow = this._isEmbed() || !this.collapsed;
       if (this._started) this._teardownTerminal();
       this._renderShell();
@@ -325,18 +235,8 @@ export class KeeperShell extends HTMLElement {
       return;
     }
     if (name === ATTR_COLLAPSED && !this._isEmbed() && this.shadowRoot) {
-      const panel = this.shadowRoot.querySelector(".wc-panel");
-      const btn = this.shadowRoot.querySelector(".wc-toggle");
-      if (this.collapsed) {
-        panel?.setAttribute("hidden", "");
-        if (btn instanceof HTMLButtonElement) setConsoleToggleButtonUi(btn, true);
-        this._teardownTerminal();
-      } else {
-        panel?.removeAttribute("hidden");
-        if (btn instanceof HTMLButtonElement) setConsoleToggleButtonUi(btn, false);
-        this._mountTerminal();
-      }
-      this._applyHostShellMinHeight();
+      if (this.collapsed) this._hidePanel();
+      else this._showPanel();
     }
   }
 
@@ -359,6 +259,8 @@ export class KeeperShell extends HTMLElement {
 
   disconnectedCallback(): void {
     this._teardownTerminal();
+    resetShellVault();
+    this._syncedKeeperHostKey = undefined;
   }
 
   private _wireChrome(): void {
@@ -371,22 +273,62 @@ export class KeeperShell extends HTMLElement {
   private _toggle(): void {
     if (this._isEmbed()) return;
     const panel = this.shadowRoot?.querySelector(".wc-panel");
+    if (!(panel instanceof HTMLElement)) return;
+    if (panel.hasAttribute("hidden")) {
+      this.removeAttribute(ATTR_COLLAPSED);
+      this._showPanel();
+    } else {
+      this.setAttribute(ATTR_COLLAPSED, "");
+      this._hidePanel();
+    }
+  }
+
+  /** Hide the terminal panel but keep xterm session (scrollback, history, current line). */
+  private _hidePanel(): void {
+    const panel = this.shadowRoot?.querySelector(".wc-panel");
     const btn = this.shadowRoot?.querySelector(".wc-toggle");
-    if (!(panel instanceof HTMLElement) || !(btn instanceof HTMLButtonElement)) return;
-    const hidden = panel.hasAttribute("hidden");
-    if (hidden) {
-      panel.removeAttribute("hidden");
-      setConsoleToggleButtonUi(btn, false);
+    if (panel instanceof HTMLElement) panel.setAttribute("hidden", "");
+    if (btn instanceof HTMLButtonElement) setConsoleToggleButtonUi(btn, true);
+    if (this._term) this._term.options.cursorBlink = false;
+    this._applyHostShellMinHeight();
+  }
+
+  /** Show the panel; mount on first open, otherwise refit and focus the existing terminal. */
+  private _showPanel(): void {
+    const panel = this.shadowRoot?.querySelector(".wc-panel");
+    const btn = this.shadowRoot?.querySelector(".wc-toggle");
+    if (panel instanceof HTMLElement) panel.removeAttribute("hidden");
+    if (btn instanceof HTMLButtonElement) setConsoleToggleButtonUi(btn, false);
+    if (!this._started) {
       this._mountTerminal();
     } else {
-      panel.setAttribute("hidden", "");
-      setConsoleToggleButtonUi(btn, true);
-      this._teardownTerminal();
+      this._resumeTerminal();
     }
     this._applyHostShellMinHeight();
   }
 
-  /** When the panel is hidden, avoid reserving terminal height so the page stays compact. */
+  private _resumeTerminal(): void {
+    const term = this._term;
+    const fit = this._fit;
+    if (!term || !fit) return;
+    term.options.cursorBlink = true;
+    const refit = (): void => {
+      try {
+        fit.fit();
+        if (term.cols < 2 || term.rows < 1) {
+          term.resize(80, 24);
+        }
+        term.focus();
+      } catch {
+        /* detached or zero-size host */
+      }
+    };
+    requestAnimationFrame(() => {
+      refit();
+      requestAnimationFrame(refit);
+    });
+  }
+
   private _applyHostShellMinHeight(): void {
     if (this._isEmbed()) return;
     const panel = this.shadowRoot?.querySelector(".wc-panel");
@@ -584,9 +526,7 @@ export class KeeperShell extends HTMLElement {
 
     const cap = document.createElement("div");
     cap.className = "wc-cli-cap";
-    cap.textContent = this.remote
-      ? `Keeper CLI — HTTP (${this.apiBase})`
-      : "Keeper CLI — in-browser SDK (click in the terminal, then type)";
+    cap.textContent = "Keeper CLI — in-browser SDK (click in the terminal, then type)";
 
     const host = document.createElement("div");
     host.className = "wc-terminal-host";
@@ -804,28 +744,7 @@ export class KeeperShell extends HTMLElement {
       this._completing = true;
       try {
         bumpEditing();
-        const remote = this._remoteApiPrefix();
-        let data: CompleteResponse;
-        if (remote === null) {
-          data = completeCliLine(this._lineBuf) as CompleteResponse;
-        } else {
-          const url = `${remote}/cli/complete`;
-          const res = await fetch(url, {
-            method: "POST",
-            headers: JSON_HEADERS,
-            body: remoteCliExecuteBody(this._lineBuf),
-          });
-          const parsed = await readRemoteJsonBody<CompleteResponse>(res);
-          if (parsed.kind === "plain") {
-            term.write("\x07");
-            return;
-          }
-          data = parsed.data;
-          if (!res.ok) {
-            term.write("\x07");
-            return;
-          }
-        }
+        const data = completeCliLine(this._lineBuf) as CompleteResponse;
         const base = typeof data.base === "string" ? data.base : "";
         const raw = data.candidates;
         const candidates = Array.isArray(raw)
@@ -878,38 +797,7 @@ export class KeeperShell extends HTMLElement {
         pendingLoginUsername = null;
         term.writeln("\x1b[90mSigning in…\x1b[0m");
         try {
-          const remote = this._remoteApiPrefix();
-          let data: CliResponse;
-          if (remote === null) {
-            data = await loginWithCredentials(username, cmd);
-          } else {
-            const res = await fetch(`${remote}/cli/login`, {
-              method: "POST",
-              headers: JSON_HEADERS,
-              body: JSON.stringify({ username, password: cmd }),
-            });
-            const parsed = await readRemoteJsonBody(res);
-            if (parsed.kind === "plain") {
-              term.write(
-                `\x1b[31mHTTP ${res.status}: response is not JSON (server error page or non-API response).\n${parsed.preview}\x1b[0m\n`
-              );
-              resetMaskAfterPasswordFlow();
-              writeFreshPrompt();
-              return;
-            }
-            data = parsed.data;
-            if (!res.ok) {
-              const d = data as CliResponse & { message?: string };
-              const parts = [d?.error, d?.err, d?.out, d?.message].filter(
-                (x): x is string => typeof x === "string" && x.trim().length > 0
-              );
-              const msg = parts.length > 0 ? parts.join("\n") : res.statusText || "request failed";
-              term.write(`\x1b[31m${msg}\x1b[0m\n`);
-              resetMaskAfterPasswordFlow();
-              writeFreshPrompt();
-              return;
-            }
-          }
+          const data = await loginWithCredentials(username, cmd);
           if (data.out) term.write(data.out);
           if (data.err) term.write(`\x1b[31m${data.err}\x1b[0m`);
         } catch (err) {
@@ -927,36 +815,7 @@ export class KeeperShell extends HTMLElement {
       if (!skipHistory) pushHistoryEntry(cmd);
 
       try {
-        const remote = this._remoteApiPrefix();
-        let data: CliResponse;
-        if (remote === null) {
-          data = await dispatchCliLine(cmd);
-        } else {
-          const res = await fetch(`${remote}/cli`, {
-            method: "POST",
-            headers: JSON_HEADERS,
-            body: remoteCliExecuteBody(cmd),
-          });
-          const parsed = await readRemoteJsonBody(res);
-          if (parsed.kind === "plain") {
-            term.write(
-              `\x1b[31mHTTP ${res.status}: response is not JSON (server error page or non-API response).\n${parsed.preview}\x1b[0m\n`
-            );
-            writeFreshPrompt();
-            return;
-          }
-          data = parsed.data;
-          if (!res.ok) {
-            const d = data as CliResponse & { message?: string };
-            const parts = [d?.error, d?.err, d?.out, d?.message].filter(
-              (x): x is string => typeof x === "string" && x.trim().length > 0
-            );
-            const msg = parts.length > 0 ? parts.join("\n") : res.statusText || "request failed";
-            term.write(`\x1b[31m${msg}\x1b[0m\n`);
-            writeFreshPrompt();
-            return;
-          }
-        }
+        const data = await dispatchCliLine(cmd);
         if (data.needPassword === true && typeof data.loginUsername === "string") {
           pendingLoginUsername = data.loginUsername;
           maskSensitive = true;
@@ -1083,28 +942,15 @@ export class KeeperShell extends HTMLElement {
       this._chain = this._chain.then(() => handleDataChunk(data));
     });
 
-    const remote = this._remoteApiPrefix();
-    if (remote === null) {
-      term.writeln("\x1b[1mWeb console\x1b[0m — commands run in this browser (Keeper SDK + CLI).");
-      term.writeln(
-        "Type `help` — records, folders, shared-folders, teams, users, vault summary (see each COMMAND --help)."
-      );
-      term.writeln("Tab completion and masked password entry are handled locally.");
-      term.writeln("Optional: `keeper-host` attribute (or VITE_KEEPER_HOST) for vault region.");
-    } else {
-      term.writeln("\x1b[1mWeb console\x1b[0m — commands execute on your backend API.");
-      term.writeln(
-        "Transport: JSON POST { line, command } (same string) to " + `${this.apiBase}/cli`
-      );
-      term.writeln(
-        "Tab completes commands (POST { line, command } to " + `${this.apiBase}/cli/complete).`
-      );
-    }
+    term.writeln("\x1b[1mWeb console\x1b[0m — commands run in this browser (Keeper SDK + CLI).");
+    term.writeln(
+      "Type `help` — records, folders, shared-folders, teams, users, vault summary (see each COMMAND --help)."
+    );
+    term.writeln("Tab completion and masked password entry are handled locally.");
+    term.writeln("Optional: `keeper-host` attribute (or VITE_KEEPER_HOST) for vault region.");
     term.writeln("Up / Down — history; Left / Right — move cursor; Delete — forward delete.");
     term.writeln(
-      remote === null
-        ? "Ctrl+O — toggle masked input (* per character; processed locally; masked lines are not saved to history)."
-        : "Ctrl+O — toggle masked input (* per character; real text is sent to the API; masked lines are not saved to history)."
+      "Ctrl+O — toggle masked input (* per character; processed locally; masked lines are not saved to history)."
     );
     writeFreshPrompt();
     term.focus();

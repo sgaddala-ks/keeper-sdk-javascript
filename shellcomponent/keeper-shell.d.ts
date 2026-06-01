@@ -14,22 +14,11 @@ export const KEEPER_SHELL_TAG: "keeper-shell";
 export const WEB_CONSOLE_TAG: "web-console";
 
 export class KeeperShell extends HTMLElement {
-  /** Base URL when {@link remote} is true (default `/api`). */
-  apiBase: string;
   keeperHost: string;
   collapsed: boolean;
   maskInput: boolean;
-  /**
-   * When true, CLI uses HTTP (`POST ${apiBase}/cli`, …).
-   * When false (default), runs in-browser (Keeper SDK).
-   */
-  remote: boolean;
-  /**
-   * @deprecated Same as `!remote`. Setting `local` removes `remote`; clearing `local` sets `remote`.
-   */
-  local: boolean;
-  /** Full-page terminal; no Open/Hide console button. */
   embed: boolean;
+  height: string;
 }
 
 /** `<web-console>` — extends {@link KeeperShell} (distinct class for dual registration). */
