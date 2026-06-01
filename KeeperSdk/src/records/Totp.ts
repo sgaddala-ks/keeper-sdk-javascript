@@ -73,10 +73,11 @@ export function parseTotpUrl(url: string): TotpParams | null {
     }
 }
 
-function counterToBuffer(counter: number): Buffer {
-    const buf = Buffer.alloc(8)
-    buf.writeUInt32BE(Math.floor(counter / UINT32_MAX), 0)
-    buf.writeUInt32BE(counter % UINT32_MAX, 4)
+function counterToBuffer(counter: number): Uint8Array {
+    const buf = new Uint8Array(8)
+    const view = new DataView(buf.buffer, buf.byteOffset, buf.byteLength)
+    view.setUint32(0, Math.floor(counter / UINT32_MAX), false)
+    view.setUint32(4, counter >>> 0, false)
     return buf
 }
 
