@@ -66,7 +66,7 @@ function formatKeeperClientError(context: string, e: unknown): string {
     `${context}: ${base}\n` +
     `  Browser could not reach Keeper (CORS, network, or wrong region).` +
     hostHint +
-    `\n  Dev: run shellcomponent with \`npm run dev\` (same-origin proxy). Prod: set keeper-host or use remote + api-base.\n`
+    `\n  Dev: run shellcomponent with \`npm run dev\` (same-origin proxy). Prod: set keeper-host on the element or host-page proxy for Keeper API.\n`
   );
 }
 
@@ -104,15 +104,27 @@ function asCliVault(v: VaultInstance): KeeperCliVault {
   };
 }
 
+function isHtmlLike(text: string): boolean {
+  const head = text.trimStart().slice(0, 32).toLowerCase();
+  return head.startsWith("<!") || head.startsWith("<html");
+}
+
 async function readTextFile(path: string): Promise<string> {
   const p = path.trim().replace(/^@/, "");
+
   if (/^https?:\/\//i.test(p)) {
     const res = await fetch(p);
     if (!res.ok) {
       throw new Error(`HTTP ${res.status} loading ${p}`);
     }
-    return res.text();
+    const text = await res.text();
+    if (isHtmlLike(text)) {
+      throw new Error(`URL returned HTML, not JSON: ${p}`);
+    }
+    return text;
   }
+
+  const isDev = import.meta.env?.DEV === true;
 
   const tryFetch = async (url: string): Promise<string | null> => {
     const res = await fetch(url);
@@ -120,33 +132,40 @@ async function readTextFile(path: string): Promise<string> {
     const ct = res.headers.get("content-type") ?? "";
     if (ct.includes("text/html")) return null;
     const text = await res.text();
-    const head = text.trimStart().slice(0, 32).toLowerCase();
-    if (head.startsWith("<!") || head.startsWith("<html")) return null;
+    if (isHtmlLike(text)) return null;
     return text;
   };
 
-  if (p.startsWith("/")) {
+  if (isDev && p.startsWith("/")) {
     const body = await tryFetch(`/@fs${p}`);
     if (body !== null) return body;
     throw new Error(
-      `Could not read ${p} (HTTP failed). Run \`npm run dev\` in shellcomponent and ensure the path is allowed by Vite fs.allow.`
+      `Could not read ${p}. Run \`npm run dev\` in shellcomponent and ensure the path is in Vite fs.allow.`
     );
   }
 
-  if (import.meta.env?.DEV) {
+  if (isDev && (p === "conf.json" || p.endsWith("/conf.json"))) {
     const fromDev = await tryFetch("/dev/keeper-session.json");
-    if (fromDev !== null && (p === "conf.json" || p.endsWith("/conf.json"))) {
-      return fromDev;
-    }
+    if (fromDev !== null) return fromDev;
+  }
+
+  if (p.startsWith("/") || p.startsWith("./") || p.startsWith("../")) {
+    throw new Error(
+      `Cannot read local file path in the browser: ${p}\n` +
+        `  Use restore-session --from-json with inline JSON, or an https:// URL your app serves.\n` +
+        (isDev ? `  Dev only: absolute path via Vite (/@fs…) or /dev/keeper-session.json.\n` : "")
+    );
   }
 
   const body = await tryFetch(p);
   if (body !== null) return body;
 
   throw new Error(
-    `Could not read ${p}. In Vite dev use an absolute path:\n` +
-      `  restore-session --from-json /Users/you/.../keeper-sdk-javascript/conf.json\n` +
-      `  or: restore-session --from-json /dev/keeper-session.json`
+    `Could not load session JSON from ${p}.\n` +
+      `  Pass inline JSON to --from-json, or a URL that returns application/json.\n` +
+      (isDev
+        ? `  Dev: restore-session --from-json /dev/keeper-session.json or an absolute /@fs path.\n`
+        : `  Prod: host the session file on your origin or paste JSON into --from-json.\n`)
   );
 }
 

@@ -1,6 +1,6 @@
 # Keeper shell component (`@keeper-security/keeper-shell-component`)
 
-Web component that embeds the Keeper CLI in the browser: **`<web-console>`** and **`<keeper-shell>`** (same behavior, two tag names). The default mode runs the in-browser Keeper JavaScript SDK and xterm.js; you can optionally point CLI traffic at your own HTTP relay.
+Web component that embeds the Keeper CLI in the browser: **`<web-console>`** and **`<keeper-shell>`** (same behavior, two tag names). Commands run in-page via the Keeper JavaScript SDK and xterm.js.
 
 ## Requirements
 
@@ -70,9 +70,7 @@ If TypeScript complains about unknown intrinsic elements, extend **`JSX.Intrinsi
 | **`height`** | Height of the terminal region (e.g. `360px`, `24rem`). Default **`320px`**. |
 | **`collapsed`** | If present, the terminal panel starts hidden; only the shell toggle control is shown until the user opens it. |
 | **`embed`** | If present, renders a full in-page terminal **without** the open/hide control. |
-| **`remote`** | If present, the CLI uses HTTP (`POST` to **`${apiBase}/cli`**, etc.) instead of the in-browser SDK. |
-| **`api-base`** | Base URL for the remote CLI (no trailing slash). Default **`/api`** when **`remote`** is set. |
-| **`keeper-host`** | Optional Keeper vault / region host override when using the in-browser SDK. |
+| **`keeper-host`** | Optional Keeper vault / region host override (e.g. `keepersecurity.eu`). |
 | **`mask-input`** | If present, new prompts start with masked input (`*`); **Ctrl+O** toggles masking in the shell. |
 
 Boolean attributes follow HTML rules: include the attribute name to enable, omit to disable.
@@ -122,7 +120,7 @@ npm run dev
 
 Open the **`http://localhost:5175`** (or whatever port Vite prints) URL—**not** `file://`. The dev page is **`index.html`**; it loads **`src/dev-bootstrap.ts`**, which registers the shell.
 
-The dev page runs the **Keeper SDK in the browser** (no `remote` / `api-base`). To avoid CORS, dev wires a **same-origin proxy** — see [`docs/SAME_ORIGIN_DEV.md`](docs/SAME_ORIGIN_DEV.md). Only `npm run dev` is needed.
+The dev page runs the **Keeper SDK in the browser**. To avoid CORS locally, dev wires a **same-origin proxy** — see [`docs/SAME_ORIGIN_DEV.md`](docs/SAME_ORIGIN_DEV.md). Only `npm run dev` is needed.
 
 ```text
 restore-session --from-json /dev/keeper-session.json --sync
@@ -135,12 +133,22 @@ Set region on the element when needed: `<web-console keeper-host="keepersecurity
 npm run build
 ```
 
-Produces **`dist/keeper-shell.es.js`**, **`dist/keeper-shell.umd.cjs`**, and emitted assets (for example the console toggle image if present).
+Runs **`build:deps`** (keeperapi + KeeperSdk) then Vite. Produces **`dist/keeper-shell.es.js`** and **`dist/keeper-shell.umd.cjs`** (~6–8 MB; Keeper SDK is bundled in-browser).
+
+## Production deployment (e.g. Keeper Web Vault / webpack)
+
+1. **Build and publish** — ship only `dist/`, `keeper-shell.d.ts`, and `package.json` `exports` (see `files` field).
+2. **Import once** in your app entry: `import "@keeper-security/keeper-shell-component";`
+3. **Render** `<web-console>` or `<keeper-shell>` (JSX: use the string tag name `"web-console"`).
+4. **Region** — set `keeper-host` when not on US prod (e.g. `keepersecurity.eu`).
+5. **Networking** — the SDK calls Keeper REST/WSS from the browser. Your origin must allow it (CORS) or proxy Keeper through your app origin (same pattern as [`docs/SAME_ORIGIN_DEV.md`](docs/SAME_ORIGIN_DEV.md), implemented in your gateway/nginx, not Vite).
+6. **`restore-session --from-json`** — in production use inline JSON or an `https://` URL on your origin; local file paths work only in Vite dev (`/@fs`, `/dev/keeper-session.json`).
+
+The bundle is self-contained (no separate CLI server). Do not expect `remote` / `api-base` attributes — those were removed.
 
 ## Security and networking
 
-- **In-browser SDK** mode performs Keeper API calls from the user’s browser; your page’s origin, CSP, and CORS must allow what the SDK needs.
-- **`remote`** mode sends CLI lines to **`api-base`**; only point it at backends you trust and that enforce auth appropriately.
+Keeper API calls run from the user’s browser. Your page’s origin, CSP, and CORS (or a reverse proxy on your origin) must allow what the SDK needs. See [`docs/SAME_ORIGIN_DEV.md`](docs/SAME_ORIGIN_DEV.md) for the local dev proxy pattern.
 
 ## License
 
