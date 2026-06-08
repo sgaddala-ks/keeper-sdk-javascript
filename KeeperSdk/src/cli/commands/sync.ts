@@ -40,7 +40,7 @@ export const syncCommand: CliCommandDefinition = {
         description: `  Pulls records, folders, and related vault data into local storage.
   Requires an active session (login or restore-session).`,
         options: '  --help, -h    Show this help.',
-        seeAlso: '  restore-session --sync, records list, folders list',
+        seeAlso: '  restore-session --sync, list, ls',
     },
     async run(host, parsed) {
         if (wantsCliHelp(parsed)) {

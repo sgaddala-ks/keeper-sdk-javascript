@@ -37,7 +37,7 @@ export const vaultCommand: CliCommandDefinition = {
         arguments: '  summary   Print record, shared folder, team, and user-folder counts.',
         options: '  --json      Emit JSON.\n  --help, -h  Show this help.',
         examples: '  vault summary\n  vault summary --json',
-        seeAlso: '  sync, records list, folders tree',
+        seeAlso: '  sync, list, tree, whoami',
     },
     async run(host, parsed) {
         if (wantsCliHelp(parsed)) {

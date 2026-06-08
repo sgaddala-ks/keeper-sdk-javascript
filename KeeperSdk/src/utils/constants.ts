@@ -93,10 +93,6 @@ export enum SyncErrorCode {
     SyncFailed = 'sync_failed',
 }
 
-export enum SyncErrorCode {
-    SyncFailed = 'sync_failed',
-}
-
 export const ResultCodes = {
     INVALID_CREDENTIALS: AuthErrorCode.InvalidCredentials,
     MISSING_USERNAME: AuthErrorCode.MissingUsername,

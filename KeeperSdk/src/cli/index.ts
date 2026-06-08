@@ -1,4 +1,5 @@
 import { registerBuiltinCliCommands } from './builtinCommands'
+import { registerCliAlias } from './registry'
 
 let registryInitialized = false
 
@@ -7,6 +8,7 @@ export function ensureKeeperCliRegistry(): void {
     if (registryInitialized) return
     registryInitialized = true
     registerBuiltinCliCommands()
+    registerCliAlias('?', 'help')
 }
 
 ensureKeeperCliRegistry()
@@ -76,10 +78,6 @@ export {
 } from './commands/login'
 
 export { runLogoutCommand, logoutCommand } from './commands/logout'
-export { recordsCommand } from './commands/records'
-export { foldersCommand } from './commands/folders'
-export { sharedFoldersCommand } from './commands/sharedFolders'
-export { teamsCommand } from './commands/teams'
 export { usersCommand } from './commands/users'
 export { vaultCommand } from './commands/vault'
 export { registerDeviceCommand } from './commands/registerDevice'
@@ -89,7 +87,19 @@ export { syncCommand, runVaultSync } from './commands/sync'
 
 export { getKeeperCliPromptPrefix } from './prompt'
 export { BUILTIN_CLI_COMMANDS, registerBuiltinCliCommands } from './builtinCommands'
-export { getCommand, executeGet, registerCommanderCliCommands } from './commander'
+export {
+    getCommand,
+    executeGet,
+    listCommand,
+    searchCommand,
+    listSfCommand,
+    listTeamCommand,
+    whoamiCommand,
+    lsCommand,
+    cdCommand,
+    treeCommand,
+    mkdirCommand,
+} from './commander'
 
 export { utf8ToBase64Url, recordUid } from './utils'
 
