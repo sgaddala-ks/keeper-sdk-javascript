@@ -28,7 +28,24 @@ const KEEPER_ART = [
   "    \\######\\               /######/ |_|  \\_\\ |_______||_______||_|      |_______||_|   \\_\\ ",
 ] as const;
 
-const COMMANDER_LOCK_PREFIX = [
+/** Dual-banner rows (lock prefix + Commander word art), Commander lines 8–12. */
+const DUAL_BANNER_ROWS: ReadonlyArray<readonly [string, string]> = [
+  ["     \\######\\             /######/", "     ____                                          _ "],
+  ["      \\######\\           /######/ ", "   /  ___|___  _ __ ___  _ __ ___   __ _ _ __   __| | ___ _ __ "],
+  ["       \\#############\\   \\#####/  ", "  /  /   / _ \\| '_ ` _ \\| '_ ` _ \\ / _` | '_ \\ / _` |/ _ \\ '__| "],
+  ["        \\#############\\   \\###/   ", "  \\  \\__| (_) | | | | | | | | | | | (_| | | | | (_| |  __/ | "],
+  ["         \\#############\\   \\#/    ", "   \\_____\\___/|_| |_| |_|_| |_| |_|\\__,_|_| |_|\\__,_|\\___|_| "],
+] as const;
+
+/** Narrow terminal: lock graphic only (leading spaces preserved). */
+const NARROW_LOCK_ART = [
+  "         /#############/   /#\\ ",
+  "        /#############/   /###\\",
+  "       /#############/   /#####\\",
+  "      /######/           \\######\\",
+  "     /######/             \\######\\",
+  "    /######/               \\######\\",
+  "    \\######\\               /######/",
   "     \\######\\             /######/",
   "      \\######\\           /######/ ",
   "       \\#############\\   \\#####/  ",
@@ -36,40 +53,26 @@ const COMMANDER_LOCK_PREFIX = [
   "         \\#############\\   \\#/    ",
 ] as const;
 
-const COMMANDER_WORD_ART = [
-  "     ____                                          _ ",
-  "   /  ___|___  _ __ ___  _ __ ___   __ _ _ __   __| | ___ _ __ ",
-  "  /  /   / _ \\| '_ ` _ \\| '_ ` _ \\ / _` | '_ \\ / _` |/ _ \\ '__| ",
-  "  \\  \\__| (_) | | | | | | | | | | | (_| | | | | (_| |  __/ | ",
-  "   \\_____\\___/|_| |_| |_|_| |_| |_|\\__,_|_| |_|\\__,_|\\___|_| ",
-] as const;
+type BannerTier = "wide" | "narrow" | "minimal";
 
-/** Short lock-only stack for compact terminals. */
-const COMPACT_LOCK = [
-  "    /#############/   /#\\",
-  "   /#############/   /###\\",
-  "  /#############/   /#####\\",
-  " /######/         \\######\\",
-  " \\######\\         /######/",
-] as const;
-
-/** Chars of KEEPER_ART lines that are the lock graphic (tagline is to the right). */
-const KEEPER_LOCK_CHARS = 38;
-
-type BannerTier = "wide" | "medium" | "compact" | "minimal";
-
+/** Full dual banner needs ~118 cols; below that use lock-only art. */
 const TIER_WIDE_COLS = 118;
-const TIER_MEDIUM_COLS = 80;
-const TIER_COMPACT_COLS = 52;
+const TIER_NARROW_COLS = 48;
+
+const COMMANDER_VERSION_ALIGN_COL = 93;
 
 function bannerTier(cols: number): BannerTier {
   if (cols >= TIER_WIDE_COLS) return "wide";
-  if (cols >= TIER_MEDIUM_COLS) return "medium";
-  if (cols >= TIER_COMPACT_COLS) return "compact";
+  if (cols >= TIER_NARROW_COLS) return "narrow";
   return "minimal";
 }
 
-/** Word-wrap plain text to terminal width (rolls down instead of truncating). */
+/** Truncate at terminal edge only — never trim leading spaces (ASCII art alignment). */
+function fitArtLine(line: string, cols: number): string {
+  return line.length > cols ? line.slice(0, cols) : line;
+}
+
+/** Word-wrap prose only (not ASCII art). */
 export function wrapPlainText(text: string, cols: number): string[] {
   const width = Math.max(cols, 16);
   const trimmed = text.trim();
@@ -115,19 +118,28 @@ function dim(text: string): string {
   return `${ESC.dim}${text}${ESC.reset}`;
 }
 
-function keeperLockPortion(line: string): string {
-  return line.slice(0, KEEPER_LOCK_CHARS).trimEnd();
-}
-
-function pushArtLines(out: string[], art: readonly string[], cols: number): void {
-  for (const line of art) {
-    for (const row of wrapPlainText(line, cols)) {
-      out.push(yellow(row));
+/** Commander display.welcome dual-line logic (truncate, never reflow). */
+function pushDualRow(out: string[], left: string, right: string, cols: number): void {
+  let yellowLine = left;
+  let whiteLine = right;
+  if (yellowLine.length > cols) {
+    yellowLine = yellowLine.slice(0, cols);
+  }
+  if (yellowLine.length + whiteLine.length > cols) {
+    if (yellowLine.length < cols) {
+      whiteLine = whiteLine.slice(0, cols - yellowLine.length);
+    } else {
+      whiteLine = "";
     }
+  }
+  if (whiteLine) {
+    out.push(`${ESC.yellow}${yellowLine}${ESC.white}${whiteLine}${ESC.reset}`);
+  } else {
+    out.push(yellow(yellowLine));
   }
 }
 
-/** Responsive Commander banner — stacks vertically on narrow terminals. */
+/** Responsive Commander banner — preserves fixed-width ASCII alignment. */
 export function bannerLines(cols: number): string[] {
   const width = Math.max(cols, 24);
   const tier = bannerTier(width);
@@ -138,55 +150,28 @@ export function bannerLines(cols: number): string[] {
     return out;
   }
 
-  if (tier === "compact") {
-    pushArtLines(out, COMPACT_LOCK, width);
-    out.push(white("Commander"));
+  if (tier === "narrow") {
+    for (const line of NARROW_LOCK_ART) {
+      out.push(yellow(fitArtLine(line, width)));
+    }
+    out.push(white(fitArtLine("Commander", width)));
     return out;
   }
 
-  if (tier === "medium") {
-    for (const line of KEEPER_ART) {
-      const lock = keeperLockPortion(line);
-      if (lock) out.push(yellow(lock));
-    }
-    for (let i = 0; i < COMMANDER_LOCK_PREFIX.length; i++) {
-      const lock = keeperLockPortion(COMMANDER_LOCK_PREFIX[i]);
-      if (lock) out.push(yellow(lock));
-      const word = COMMANDER_WORD_ART[i] ?? "";
-      for (const row of wrapPlainText(word, width)) {
-        if (row.trim()) out.push(white(row));
-      }
-    }
-    return out;
-  }
-
-  // wide — dual layout when each combined line fits; otherwise stack per line
   for (const line of KEEPER_ART) {
-    for (const row of wrapPlainText(line, width)) {
-      out.push(yellow(row));
-    }
+    out.push(yellow(fitArtLine(line, width)));
   }
-  for (let i = 0; i < COMMANDER_LOCK_PREFIX.length; i++) {
-    const left = COMMANDER_LOCK_PREFIX[i];
-    const right = COMMANDER_WORD_ART[i] ?? "";
-    if (left.length + right.length <= width) {
-      out.push(`${ESC.yellow}${left}${ESC.white}${right}${ESC.reset}`);
-    } else {
-      for (const row of wrapPlainText(left, width)) {
-        out.push(yellow(row));
-      }
-      for (const row of wrapPlainText(right, width)) {
-        if (row.trim()) out.push(white(row));
-      }
-    }
+  for (const [left, right] of DUAL_BANNER_ROWS) {
+    pushDualRow(out, left, right, width);
   }
   return out;
 }
 
 function versionLine(shellVersion: string, sdkVersion: string, cols: number): string {
   const label = `v${shellVersion} · SDK ${sdkVersion}`;
-  if (cols < 72) return dim(label);
-  const pad = Math.max(0, cols - label.length);
+  if (cols < 48) return dim(label);
+  const alignTo = Math.min(COMMANDER_VERSION_ALIGN_COL, cols);
+  const pad = Math.max(0, alignTo - label.length);
   return `${ESC.dim}${" ".repeat(pad)}${label}${ESC.reset}`;
 }
 
@@ -205,7 +190,7 @@ function notLoggedInMessages(cols: number, keeperHost?: string): string[] {
     }
   }
 
-  if (cols >= 80) {
+  if (cols >= 100) {
     out.push(
       `Type ${ESC.green}login <email>${ESC.reset} to authenticate, ` +
         `${ESC.green}restore-session${ESC.reset} to resume, or ` +
