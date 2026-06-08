@@ -343,6 +343,10 @@ export class KeeperVault {
         this.log.info(`Session restored for ${params.username}`)
     }
 
+    public async getAccountUsername(): Promise<string | undefined> {
+        return this.sessionManager.getLastUsername()
+    }
+
     public async resumeSession(): Promise<void> {
         const username = await this.sessionManager.getLastUsername()
         if (!username) {

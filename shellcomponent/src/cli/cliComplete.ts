@@ -1,7 +1,11 @@
 /**
  * Tab-completion for keeper-shell (SDK command registry).
  */
-import { getCliCommand, listCliCommandNames } from "@keeper-security/keeper-sdk-javascript";
+import {
+  getCliCommand,
+  listCliCommandNamesForLoginState,
+  type KeeperCliHost,
+} from "@keeper-security/keeper-sdk-javascript";
 
 const HELP_FLAGS = ["--help", "-h"] as const;
 
@@ -16,7 +20,13 @@ export type CliCompleteResult = {
   candidates: string[];
 };
 
-export function completeCliLine(line: string): CliCompleteResult {
+export type CliCompleteOptions = {
+  loggedIn?: boolean
+  host?: KeeperCliHost
+}
+
+export function completeCliLine(line: string, options?: CliCompleteOptions): CliCompleteResult {
+  const loggedIn = options?.host?.getVault().isLoggedIn ?? options?.loggedIn ?? true
   const completesNewWord = /\s$/.test(line);
   const segments = line.match(/\S+/g) ?? [];
 
@@ -41,7 +51,7 @@ export function completeCliLine(line: string): CliCompleteResult {
     partialLen > 0 ? line.slice(0, line.length - partialLen) : line;
 
   if (words.length === 0) {
-    const top = listCliCommandNames();
+    const top = [...listCliCommandNamesForLoginState(loggedIn)];
     const hits = top.filter((c) => c.startsWith(stubLc));
     return { base: baseFor(stub.length), candidates: hits };
   }
