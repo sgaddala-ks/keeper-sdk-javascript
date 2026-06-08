@@ -55,14 +55,25 @@ export function getDetailedHelpPageForRegistry(
     return null
 }
 
-export function formatAllCommandsSummary(commands: readonly CliCommandDefinition[]): string {
+export type CommandsSummaryOptions = {
+    header?: string
+    footer?: string
+}
+
+export function formatAllCommandsSummary(
+    commands: readonly CliCommandDefinition[],
+    options?: CommandsSummaryOptions
+): string {
     const sorted = [...commands].sort((a, b) => a.name.localeCompare(b.name))
     const w = Math.max(...sorted.map((c) => c.name.length), 8)
-    let out = 'Supported commands:\n\n'
+    let out = options?.header ?? 'Supported commands:\n\n'
+    if (!out.endsWith('\n\n')) {
+        out = out.endsWith('\n') ? `${out}\n` : `${out}\n\n`
+    }
     for (const c of sorted) {
         out += `  ${c.name.padEnd(w)}  ${c.description}\n`
     }
-    out += '\nRun `<command> --help` (or `-h`) for details on a specific command.\n'
+    out += options?.footer ?? '\nRun `<command> --help` (or `-h`) for details on a specific command.\n'
     return out
 }
 

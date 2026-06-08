@@ -190,6 +190,9 @@ export {
     getCliCommand,
     listCliCommands,
     listCliCommandNames,
+    listCliCommandNamesForLoginState,
+    listCliCommandsForLoginState,
+    isAuthCliCommand,
     listDocumentedCommands,
     getDetailedHelpPage,
     formatDetailedHelpForCommand,
@@ -203,6 +206,10 @@ export {
     runLogoutCommand,
     KeeperCliParser,
     createKeeperCliParser,
+    getKeeperCliPromptPrefix,
+    BUILTIN_CLI_COMMANDS,
+    registerBuiltinCliCommands,
+    registerCommanderCliCommands,
 } from './cli'
 export type { KeeperCliParserOptions } from './cli'
 export type {

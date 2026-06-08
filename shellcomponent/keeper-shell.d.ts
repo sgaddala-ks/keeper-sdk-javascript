@@ -28,7 +28,10 @@ export class WebConsoleElement extends KeeperShell {}
 export type WebConsole = WebConsoleElement;
 
 export function dispatchCliLine(line: string): Promise<CliResult>;
-export function completeCliLine(line: string): {
+export function completeCliLine(
+  line: string,
+  options?: { loggedIn?: boolean; host?: import("@keeper-security/keeper-sdk-javascript").KeeperCliHost }
+): {
   base: string;
   candidates: string[];
 };

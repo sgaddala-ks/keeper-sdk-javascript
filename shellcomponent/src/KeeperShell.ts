@@ -3,7 +3,9 @@ import { FitAddon } from "@xterm/addon-fit";
 import xtermCss from "@xterm/xterm/css/xterm.css?inline";
 
 import { completeCliLine } from "./cli/cliComplete.js";
+import { getKeeperCliPromptPrefix } from "@keeper-security/keeper-sdk-javascript";
 import { dispatchCliLine } from "./cli/cliDispatch.js";
+import { shellKeeperCliHost } from "./cli/keeperCliHost.js";
 import { setShellCliContext } from "./cli/cliContext.js";
 import { loginWithCredentials, resetShellVault } from "./cli/keeperCommands.js";
 
@@ -58,7 +60,8 @@ function longestCommonPrefix(values: string[]): string {
   return pref;
 }
 
-const PROMPT_PREFIX = "$ ";
+/** Fallback when SDK prompt helper is unavailable. */
+const FALLBACK_PROMPT_PREFIX = "$ ";
 
 /** Screen rows used by prompt + input when the line wraps (cols from xterm). */
 function promptDisplayRows(displayChars: number, cols: number): number {
@@ -659,9 +662,17 @@ export class KeeperShell extends HTMLElement {
       if (this.hasAttribute(ATTR_MASK_INPUT)) maskSensitive = true;
     };
 
+    const promptPrefix = (): string => {
+      try {
+        return getKeeperCliPromptPrefix(shellKeeperCliHost);
+      } catch {
+        return FALLBACK_PROMPT_PREFIX;
+      }
+    };
+
     const writeFreshPrompt = (): void => {
       promptRows = 1;
-      term.write(PROMPT_PREFIX);
+      term.write(promptPrefix());
       afterNewPrompt();
     };
 
@@ -677,9 +688,10 @@ export class KeeperShell extends HTMLElement {
       if (cursorPos < 0) cursorPos = 0;
       if (cursorPos > line.length) cursorPos = line.length;
       const visible = maskDisplayActive() ? "*".repeat(line.length) : line;
-      const displayChars = PROMPT_PREFIX.length + visible.length;
+      const prefix = promptPrefix();
+      const displayChars = prefix.length + visible.length;
       clearPromptRows();
-      term.write(`${PROMPT_PREFIX}${visible}`);
+      term.write(`${prefix}${visible}`);
       promptRows = promptDisplayRows(displayChars, term.cols);
       const back = line.length - cursorPos;
       if (back > 0) term.write(`\x1b[${back}D`);
@@ -744,7 +756,7 @@ export class KeeperShell extends HTMLElement {
       this._completing = true;
       try {
         bumpEditing();
-        const data = completeCliLine(this._lineBuf) as CompleteResponse;
+        const data = completeCliLine(this._lineBuf, { host: shellKeeperCliHost }) as CompleteResponse;
         const base = typeof data.base === "string" ? data.base : "";
         const raw = data.candidates;
         const candidates = Array.isArray(raw)
@@ -943,9 +955,15 @@ export class KeeperShell extends HTMLElement {
     });
 
     term.writeln("\x1b[1mWeb console\x1b[0m — commands run in this browser (Keeper SDK + CLI).");
-    term.writeln(
-      "Type `help` — records, folders, shared-folders, teams, users, vault summary (see each COMMAND --help)."
-    );
+    if (shellKeeperCliHost.getVault().isLoggedIn) {
+      term.writeln(
+        "Keeper Commander-style CLI: get, ls, cd, tree, search, sync-down, help (see COMMAND --help)."
+      );
+    } else {
+      term.writeln(
+        "Not logged in — use login, restore-session, or register-device. Type help for sign-in commands."
+      );
+    }
     term.writeln("Tab completion and masked password entry are handled locally.");
     term.writeln("Optional: `keeper-host` attribute (or VITE_KEEPER_HOST) for vault region.");
     term.writeln("Up / Down — history; Left / Right — move cursor; Delete — forward delete.");

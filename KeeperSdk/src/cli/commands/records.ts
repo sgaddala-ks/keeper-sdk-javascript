@@ -1,10 +1,11 @@
-import { formatRecord, getRecordTitle } from '../../records/RecordUtils'
+import { getRecordTitle } from '../../records/RecordUtils'
 import type { CliCommandDefinition, CliResult, KeeperCliHost, ParsedCli } from '../types'
 import { getOpt, hasOpt, wantsCliHelp } from '../parse'
 import { formatDetailedHelpForCommand } from '../help'
 import { recordUid } from '../utils'
 import { ensureCapability, ensureSession } from '../commandHelpers'
 import { formatTable } from '../table'
+import { executeGet } from '../commander/getCore'
 
 const SUBCOMMANDS = ['list', 'get', 'find', 'share-info'] as const
 type Sub = (typeof SUBCOMMANDS)[number]
@@ -26,21 +27,11 @@ async function runGet(host: KeeperCliHost, parsed: ParsedCli): Promise<CliResult
     if (!target) {
         return { code: 1, out: '', err: 'records get: missing UID or title. Usage: records get <uid|title>\n' }
     }
-    const r = await ensureSession(host)
-    if (r) return r
-    const v = host.getVault()
-    const cap = ensureCapability(v, 'findRecord', 'records get')
-    if (cap) return cap
-    await v.sync()
-    const record = v.findRecord!(target)
-    if (!record) {
-        return { code: 1, out: '', err: `records get: no record matching "${target}"\n` }
+    const shifted: ParsedCli = {
+        positional: [target],
+        opts: parsed.opts,
     }
-    const detail = hasOpt(parsed.opts, 'detail')
-    if (hasOpt(parsed.opts, 'json')) {
-        return { code: 0, out: JSON.stringify(record, null, 2) + '\n', err: '' }
-    }
-    return { code: 0, out: formatRecord(record, detail) + '\n', err: '' }
+    return executeGet(host, shifted, 'records get')
 }
 
 async function runFind(host: KeeperCliHost, parsed: ParsedCli): Promise<CliResult> {
@@ -106,11 +97,11 @@ export const recordsCommand: CliCommandDefinition = {
     description: 'Vault records (list, get, find, share-info).',
     usage: 'records list|get|find|share-info [args] [--detail] [--pattern] [--json] [--help|-h]',
     subcommands: [...SUBCOMMANDS],
-    flagOptions: ['--detail', '--pattern', '--json'],
+    flagOptions: ['--detail', '--pattern', '--json', '--format', '--unmask'],
     help: {
         title: 'records — search and inspect vault records',
         synopsis: `  records [list]
-  records get UID|TITLE [--detail] [--json]
+  records get UID|TITLE [--format {detail,json,password,fields}] [--unmask] [--detail] [--json]
   records find TEXT [--pattern TEXT] [--json]
   records share-info UID|TITLE`,
         description: '  list syncs and prints uid + title. get/find resolve by uid or title substring.',

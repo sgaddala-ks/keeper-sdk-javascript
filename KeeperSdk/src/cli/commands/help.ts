@@ -6,7 +6,8 @@ import {
     formatShortCommandSummary,
     getDetailedHelpPageForRegistry,
 } from '../help'
-import { listCliCommands } from '../registry'
+import { isAuthCliCommand, listCliCommandsForLoginState } from '../access'
+import { getCliCommand } from '../registry'
 
 export const helpCommand: CliCommandDefinition = {
     name: 'help',
@@ -16,36 +17,57 @@ export const helpCommand: CliCommandDefinition = {
     help: {
         title: 'help — show commands or short syntax for one command',
         synopsis: '  help [COMMAND]',
-        description: `  Without arguments, lists every built-in command with a one-line summary.
-  With COMMAND, prints the same overview line plus usage for that command.
+        description: `  Without arguments, lists commands for the current session.
+  When not logged in, only sign-in commands are listed (login, restore-session, …).
+  After login, lists vault commands as well.
 
-  For full documentation on each command, run:
-    COMMAND --help
-    COMMAND -h`,
+  With COMMAND, prints usage for that command (sign-in commands only when logged out).`,
         options: '  None. This command does not take GNU-style flags.',
         seeAlso: '  Each command’s --help output.',
     },
-    async run(_host, parsed) {
+    async run(host, parsed) {
         if (wantsCliHelp(parsed)) {
             return { code: 0, out: formatDetailedHelpForCommand(helpCommand), err: '' }
         }
         if (parsed.opts.size > 0) {
             return { code: 1, out: '', err: 'help: unknown option (try `help --help`)\n' }
         }
+        const loggedIn = host.getVault().isLoggedIn
+        const visible = listCliCommandsForLoginState(loggedIn)
         const args = parsed.positional
         if (args.length === 0) {
-            return { code: 0, out: formatAllCommandsSummary(listCliCommands()), err: '' }
+            if (loggedIn) {
+                return { code: 0, out: formatAllCommandsSummary(visible), err: '' }
+            }
+            return {
+                code: 0,
+                out: formatAllCommandsSummary(visible, {
+                    header: 'Not logged in — sign-in commands:\n\n',
+                    footer:
+                        '\nRun `login`, `restore-session`, or `register-device` to open the vault.\n' +
+                        'After login, run `help` again for vault commands (get, ls, cd, …).\n',
+                }),
+                err: '',
+            }
         }
         if (args.length > 1) {
             return { code: 1, out: '', err: 'Usage: help [command]\n' }
         }
         const name = args[0]
-        const long = getDetailedHelpPageForRegistry(listCliCommands(), name)
+        if (!loggedIn && !isAuthCliCommand(name)) {
+            return {
+                code: 1,
+                out: '',
+                err:
+                    `help: "${name}" requires a logged-in session. ` +
+                    'Run `help` for sign-in commands (login, restore-session, register-device).\n',
+            }
+        }
+        const long = getDetailedHelpPageForRegistry(visible, name)
         if (long) {
             return { code: 0, out: long, err: '' }
         }
-        const commands = listCliCommands()
-        const def = commands.find((c) => c.name === name.toLowerCase())
+        const def = getCliCommand(name)
         if (!def) {
             return { code: 1, out: '', err: `help: unknown command: ${name}\n` }
         }

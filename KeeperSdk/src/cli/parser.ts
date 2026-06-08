@@ -2,7 +2,12 @@ import type { CliCommandDefinition, CliResult, KeeperCliHost, ParsedCli } from '
 import { parseCliArgs, tokenizeArguments, wantsCliHelp } from './parse'
 import { extractFromJsonFlagValue } from './jsonArg'
 import { RESTORE_SESSION_TRAILING_OPTS } from './commands/restoreSession'
+import { AUTH_CLI_COMMAND_NAMES, isAuthCliCommand } from './access'
+import { BUILTIN_CLI_COMMANDS } from './builtinCommands'
 import { formatAllCommandsSummary, formatDetailedHelpForCommand, formatShortCommandSummary } from './help'
+
+const NOT_LOGGED_IN_ERR =
+    'Not logged in. Run `login`, `restore-session`, or `register-device` (see `help`).\n'
 
 export type KeeperCliParserOptions = {
     prog?: string
@@ -60,9 +65,20 @@ export class KeeperCliParser {
         return target ? this.commands.get(target) : undefined
     }
 
-    formatHelp(): string {
+    formatHelp(host?: KeeperCliHost): string {
+        const loggedIn = host?.getVault().isLoggedIn ?? true
+        const commands = loggedIn
+            ? this.list()
+            : this.list().filter((c) => AUTH_CLI_COMMAND_NAMES.has(c.name))
         const header = this.description ? `${this.prog} — ${this.description}\n\n` : ''
-        const body = formatAllCommandsSummary(this.list())
+        const body = loggedIn
+            ? formatAllCommandsSummary(commands)
+            : formatAllCommandsSummary(commands, {
+                  header: 'Not logged in — sign-in commands:\n\n',
+                  footer:
+                      '\nRun `login`, `restore-session`, or `register-device` to open the vault.\n' +
+                      'After login, run `help` again for vault commands (get, ls, cd, …).\n',
+              })
         const footer = this.epilog ? `\n${this.epilog}\n` : ''
         return header + body + footer
     }
@@ -80,7 +96,7 @@ export class KeeperCliParser {
     async parse(line: string | readonly string[], host: KeeperCliHost): Promise<CliResult> {
         const { tokens, raw } = normalizeInput(line)
         if (tokens.length === 0) {
-            return ok(this.formatHelp())
+            return ok(this.formatHelp(host))
         }
 
         const first = tokens[0]
@@ -88,7 +104,10 @@ export class KeeperCliParser {
 
         if (isHelpToken(first)) {
             const sub = rest[0]
-            if (!sub) return ok(this.formatHelp())
+            if (!sub) return ok(this.formatHelp(host))
+            if (!host.getVault().isLoggedIn && !isAuthCliCommand(sub)) {
+                return err(NOT_LOGGED_IN_ERR)
+            }
             const page = this.formatCommandHelp(sub)
             if (page) return ok(page)
             return err(`${this.prog}: unknown command: ${sub}\nTry: ${this.prog} --help\n`)
@@ -97,6 +116,10 @@ export class KeeperCliParser {
         const def = this.resolve(first)
         if (!def) {
             return err(`${this.prog}: unknown command: ${first}\nTry: ${this.prog} --help\n`)
+        }
+
+        if (!host.getVault().isLoggedIn && !isAuthCliCommand(def.name)) {
+            return err(NOT_LOGGED_IN_ERR)
         }
 
         let parsed: ParsedCli
@@ -123,39 +146,7 @@ export function createKeeperCliParser(options: KeeperCliParserOptions = {}): Kee
 }
 
 function loadBuiltinsInto(parser: KeeperCliParser): void {
-    const { foldersCommand } = require('./commands/folders') as typeof import('./commands/folders')
-    const { helpCommand } = require('./commands/help') as typeof import('./commands/help')
-    const { loginCommand } = require('./commands/login') as typeof import('./commands/login')
-    const { logoutCommand } = require('./commands/logout') as typeof import('./commands/logout')
-    const { recordsCommand } = require('./commands/records') as typeof import('./commands/records')
-    const {
-        registerDeviceCommand,
-    } = require('./commands/registerDevice') as typeof import('./commands/registerDevice')
-    const {
-        restoreSessionCommand,
-    } = require('./commands/restoreSession') as typeof import('./commands/restoreSession')
-    const { syncCommand } = require('./commands/sync') as typeof import('./commands/sync')
-    const { vaultCommand } = require('./commands/vault') as typeof import('./commands/vault')
-    const {
-        sharedFoldersCommand,
-    } = require('./commands/sharedFolders') as typeof import('./commands/sharedFolders')
-    const { teamsCommand } = require('./commands/teams') as typeof import('./commands/teams')
-    const { usersCommand } = require('./commands/users') as typeof import('./commands/users')
-
-    parser.addCommands([
-        helpCommand,
-        loginCommand,
-        registerDeviceCommand,
-        restoreSessionCommand,
-        syncCommand,
-        vaultCommand,
-        recordsCommand,
-        foldersCommand,
-        sharedFoldersCommand,
-        teamsCommand,
-        usersCommand,
-        logoutCommand,
-    ])
+    parser.addCommands(BUILTIN_CLI_COMMANDS)
 }
 
 function normalizeInput(line: string | readonly string[]): { tokens: string[]; raw: string } {

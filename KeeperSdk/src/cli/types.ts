@@ -69,6 +69,7 @@ export type KeeperCliHost = {
     envString(name: string): string | undefined
     formatError(context: string, err: unknown): string
     readTextFile?: (path: string) => Promise<string>
+    getAccountUsername?: () => Promise<string | undefined>
 }
 
 export type CliHelpDoc = {

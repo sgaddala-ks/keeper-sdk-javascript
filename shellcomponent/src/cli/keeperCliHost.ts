@@ -174,4 +174,5 @@ export const shellKeeperCliHost: KeeperCliHost = {
   envString,
   formatError: formatKeeperClientError,
   readTextFile,
+  getAccountUsername: () => getVault().getAccountUsername(),
 };
