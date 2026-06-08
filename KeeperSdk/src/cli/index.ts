@@ -1,16 +1,4 @@
-import { registerCliCommand } from './registry'
-import { foldersCommand } from './commands/folders'
-import { helpCommand } from './commands/help'
-import { loginCommand } from './commands/login'
-import { logoutCommand } from './commands/logout'
-import { recordsCommand } from './commands/records'
-import { registerDeviceCommand } from './commands/registerDevice'
-import { restoreSessionCommand } from './commands/restoreSession'
-import { sharedFoldersCommand } from './commands/sharedFolders'
-import { syncCommand } from './commands/sync'
-import { teamsCommand } from './commands/teams'
-import { usersCommand } from './commands/users'
-import { vaultCommand } from './commands/vault'
+import { registerBuiltinCliCommands } from './builtinCommands'
 
 let registryInitialized = false
 
@@ -18,18 +6,7 @@ let registryInitialized = false
 export function ensureKeeperCliRegistry(): void {
     if (registryInitialized) return
     registryInitialized = true
-    registerCliCommand(helpCommand)
-    registerCliCommand(loginCommand)
-    registerCliCommand(registerDeviceCommand)
-    registerCliCommand(restoreSessionCommand)
-    registerCliCommand(syncCommand)
-    registerCliCommand(vaultCommand)
-    registerCliCommand(recordsCommand)
-    registerCliCommand(foldersCommand)
-    registerCliCommand(sharedFoldersCommand)
-    registerCliCommand(teamsCommand)
-    registerCliCommand(usersCommand)
-    registerCliCommand(logoutCommand)
+    registerBuiltinCliCommands()
 }
 
 ensureKeeperCliRegistry()
@@ -77,6 +54,14 @@ export {
     clearCliRegistry,
 } from './registry'
 
+export {
+    AUTH_CLI_COMMAND_NAMES,
+    isAuthCliCommand,
+    filterCliCommandsForLoginState,
+    listCliCommandsForLoginState,
+    listCliCommandNamesForLoginState,
+} from './access'
+
 export { dispatchKeeperCli, dispatchCliLine } from './dispatch'
 
 export { KeeperCliParser, createKeeperCliParser } from './parser'
@@ -101,6 +86,10 @@ export { registerDeviceCommand } from './commands/registerDevice'
 export { helpCommand } from './commands/help'
 export { restoreSessionCommand } from './commands/restoreSession'
 export { syncCommand, runVaultSync } from './commands/sync'
+
+export { getKeeperCliPromptPrefix } from './prompt'
+export { BUILTIN_CLI_COMMANDS, registerBuiltinCliCommands } from './builtinCommands'
+export { getCommand, executeGet, registerCommanderCliCommands } from './commander'
 
 export { utf8ToBase64Url, recordUid } from './utils'
 

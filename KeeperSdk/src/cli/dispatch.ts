@@ -3,7 +3,11 @@ import { parseCliArgs, tokenizeArguments, wantsCliHelp } from './parse'
 import { extractFromJsonFlagValue } from './jsonArg'
 import { RESTORE_SESSION_TRAILING_OPTS } from './commands/restoreSession'
 import { formatDetailedHelpForCommand } from './help'
+import { isAuthCliCommand } from './access'
 import { getCliCommand } from './registry'
+
+const NOT_LOGGED_IN_ERR =
+    'Not logged in. Run `login`, `restore-session`, or `register-device` (see `help`).\n'
 
 export async function dispatchKeeperCli(
     commandName: string,
@@ -14,6 +18,9 @@ export async function dispatchKeeperCli(
     const def = getCliCommand(commandName)
     if (!def) {
         return { code: 1, out: '', err: `Unknown command: ${commandName}\n` }
+    }
+    if (!host.getVault().isLoggedIn && !isAuthCliCommand(def.name)) {
+        return { code: 1, out: '', err: NOT_LOGGED_IN_ERR }
     }
     const parsed = preParsed ?? parseCliArgs(args)
     if (wantsCliHelp(parsed)) {

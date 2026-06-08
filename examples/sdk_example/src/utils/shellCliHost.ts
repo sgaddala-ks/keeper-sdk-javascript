@@ -115,4 +115,5 @@ export const exampleShellCliHost: KeeperCliHost = {
     envString,
     formatError: formatKeeperClientError,
     readTextFile,
+    getAccountUsername: () => getVault().getAccountUsername(),
 }

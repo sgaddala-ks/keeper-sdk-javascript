@@ -31,7 +31,7 @@ export async function runVaultSync(host: KeeperCliHost): Promise<CliResult> {
 export const syncCommand: CliCommandDefinition = {
     name: 'sync',
     order: 20,
-    aliases: ['syncdown'],
+    aliases: ['syncdown', 'sync-down', 'd'],
     description: 'Download / refresh vault data from Keeper (syncDown).',
     usage: 'sync [--help|-h]',
     help: {
