@@ -1,21 +1,24 @@
 import type { CliCommandDefinition } from './types'
 import { registerCliCommand } from './registry'
-import { foldersCommand } from './commands/folders'
 import { helpCommand } from './commands/help'
 import { loginCommand } from './commands/login'
 import { logoutCommand } from './commands/logout'
-import { recordsCommand } from './commands/records'
 import { registerDeviceCommand } from './commands/registerDevice'
 import { restoreSessionCommand } from './commands/restoreSession'
-import { sharedFoldersCommand } from './commands/sharedFolders'
 import { syncCommand } from './commands/sync'
-import { teamsCommand } from './commands/teams'
 import { usersCommand } from './commands/users'
 import { vaultCommand } from './commands/vault'
 import { getCommand } from './commander/get'
 import { cdCommand, lsCommand, mkdirCommand, treeCommand } from './commander/nav'
-import { listSfCommand, listTeamCommand, searchCommand, whoamiCommand } from './commander/misc'
+import {
+    listCommand,
+    listSfCommand,
+    listTeamCommand,
+    searchCommand,
+    whoamiCommand,
+} from './commander/misc'
 
+/** Built-in CLI commands (Keeper Commander-style vault shell). */
 export const BUILTIN_CLI_COMMANDS: readonly CliCommandDefinition[] = [
     helpCommand,
     loginCommand,
@@ -24,6 +27,7 @@ export const BUILTIN_CLI_COMMANDS: readonly CliCommandDefinition[] = [
     syncCommand,
     vaultCommand,
     getCommand,
+    listCommand,
     lsCommand,
     cdCommand,
     treeCommand,
@@ -32,10 +36,6 @@ export const BUILTIN_CLI_COMMANDS: readonly CliCommandDefinition[] = [
     listSfCommand,
     listTeamCommand,
     whoamiCommand,
-    recordsCommand,
-    foldersCommand,
-    sharedFoldersCommand,
-    teamsCommand,
     usersCommand,
     logoutCommand,
 ]

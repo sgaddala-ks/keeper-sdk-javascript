@@ -71,10 +71,10 @@ export async function loginViaShellCliRestoreSession(
     return vault
 }
 
-/** Run `records list` through CLI dispatch (shell-style listing). */
+/** Run `list` through CLI dispatch (shell-style listing). */
 export async function listRecordsViaShellCli(): Promise<string> {
-    logger.info('[shell-cli] records list')
-    const result = await dispatchCliLine('records list', exampleShellCliHost)
-    throwOnCliFailure('records list', result)
+    logger.info('[shell-cli] list')
+    const result = await dispatchCliLine('list', exampleShellCliHost)
+    throwOnCliFailure('list', result)
     return result.out
 }

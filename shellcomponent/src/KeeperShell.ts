@@ -5,7 +5,9 @@ import xtermCss from "@xterm/xterm/css/xterm.css?inline";
 import { completeCliLine } from "./cli/cliComplete.js";
 import { getKeeperCliPromptPrefix } from "@keeper-security/keeper-sdk-javascript";
 import { dispatchCliLine } from "./cli/cliDispatch.js";
+import { getShellKeeperHost } from "./cli/cliContext.js";
 import { shellKeeperCliHost } from "./cli/keeperCliHost.js";
+import { writeShellWelcome } from "./cli/shellBanner.js";
 import { setShellCliContext } from "./cli/cliContext.js";
 import { loginWithCredentials, resetShellVault } from "./cli/keeperCommands.js";
 
@@ -609,13 +611,6 @@ export class KeeperShell extends HTMLElement {
     };
 
     ensureUsableGeometry();
-    requestAnimationFrame(() => {
-      ensureUsableGeometry();
-      requestAnimationFrame(() => {
-        ensureUsableGeometry();
-        term.focus();
-      });
-    });
 
     host.tabIndex = 0;
     host.setAttribute("aria-label", "Command line");
@@ -954,24 +949,24 @@ export class KeeperShell extends HTMLElement {
       this._chain = this._chain.then(() => handleDataChunk(data));
     });
 
-    term.writeln("\x1b[1mWeb console\x1b[0m — commands run in this browser (Keeper SDK + CLI).");
-    if (shellKeeperCliHost.getVault().isLoggedIn) {
-      term.writeln(
-        "Keeper Commander-style CLI: get, ls, cd, tree, search, sync-down, help (see COMMAND --help)."
-      );
-    } else {
-      term.writeln(
-        "Not logged in — use login, restore-session, or register-device. Type help for sign-in commands."
-      );
-    }
-    term.writeln("Tab completion and masked password entry are handled locally.");
-    term.writeln("Optional: `keeper-host` attribute (or VITE_KEEPER_HOST) for vault region.");
-    term.writeln("Up / Down — history; Left / Right — move cursor; Delete — forward delete.");
-    term.writeln(
-      "Ctrl+O — toggle masked input (* per character; processed locally; masked lines are not saved to history)."
-    );
-    writeFreshPrompt();
-    term.focus();
+    const paintWelcome = (): void => {
+      writeShellWelcome((line) => term.writeln(line), {
+        cols: term.cols,
+        loggedIn: shellKeeperCliHost.getVault().isLoggedIn,
+        keeperHost: getShellKeeperHost(),
+      });
+      writeFreshPrompt();
+    };
+
+    requestAnimationFrame(() => {
+      ensureUsableGeometry();
+      requestAnimationFrame(() => {
+        ensureUsableGeometry();
+        paintWelcome();
+        term.focus();
+      });
+    });
+
     const lateFocus = (): void => {
       try {
         fit.fit();
