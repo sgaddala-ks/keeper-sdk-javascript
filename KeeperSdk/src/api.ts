@@ -209,7 +209,7 @@ export {
     getKeeperCliPromptPrefix,
     BUILTIN_CLI_COMMANDS,
     registerBuiltinCliCommands,
-    registerCommanderCliCommands,
+    listCommand,
 } from './cli'
 export type { KeeperCliParserOptions } from './cli'
 export type {

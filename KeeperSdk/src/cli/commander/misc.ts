@@ -8,6 +8,22 @@ import { recordUid } from '../utils'
 import { formatSharedFoldersTable, renderSharedFoldersAsciiTable } from '../../sharedFolders/listSharedFolders'
 import { formatTeamsTable, renderTeamsAsciiTable } from '../../teams/listTeams'
 
+async function runList(host: KeeperCliHost, parsed: ParsedCli): Promise<CliResult> {
+    const r = await ensureSession(host)
+    if (r) return r
+    const v = host.getVault()
+    await v.sync()
+    const records = v.getRecords()
+    const rows = records.map((rec) => [recordUid(rec), getRecordTitle(rec)])
+    if (hasOpt(parsed.opts, 'json')) {
+        return { code: 0, out: JSON.stringify(records, null, 2) + '\n', err: '' }
+    }
+    if (rows.length === 0) {
+        return { code: 0, out: '(no records)\n', err: '' }
+    }
+    return { code: 0, out: formatTable(['record_uid', 'title'], rows), err: '' }
+}
+
 async function runSearch(host: KeeperCliHost, parsed: ParsedCli): Promise<CliResult> {
     const pattern = parsed.positional.join(' ') || getOpt(parsed.opts, 'pattern')
     if (!pattern?.trim()) {
@@ -91,6 +107,29 @@ async function runWhoami(host: KeeperCliHost): Promise<CliResult> {
         )
     }
     return { code: 0, out: lines.join('\n') + '\n', err: '' }
+}
+
+export const listCommand: CliCommandDefinition = {
+    name: 'list',
+    order: 14,
+    aliases: ['l'],
+    description: 'List all vault records (uid and title).',
+    usage: 'list [--json]',
+    flagOptions: ['--json'],
+    help: {
+        title: 'list — all records (Keeper Commander)',
+        synopsis: 'usage: list [--json]',
+        description: '  Syncs and prints every record uid + title in the vault.',
+        seeAlso: '  get, search, ls',
+    },
+    async run(host, parsed) {
+        if (wantsCliHelp(parsed)) return { code: 0, out: formatDetailedHelpForCommand(listCommand), err: '' }
+        try {
+            return await runList(host, parsed)
+        } catch (e) {
+            return { code: 1, out: '', err: host.formatError('list', e) }
+        }
+    },
 }
 
 export const searchCommand: CliCommandDefinition = {

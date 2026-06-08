@@ -87,7 +87,7 @@ export const usersCommand: CliCommandDefinition = {
         examples: `  users list
   users list --pattern @acme.com --columns name,status,node
   users view user@example.com`,
-        seeAlso: '  teams list, sync, login',
+        seeAlso: '  list-team, whoami, sync, login',
     },
     async run(host, parsed) {
         if (wantsCliHelp(parsed)) {
