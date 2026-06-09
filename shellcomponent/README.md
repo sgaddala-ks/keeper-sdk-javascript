@@ -85,12 +85,15 @@ The shell dispatches the Keeper SDK CLI (`dispatchCliLine`). Built-in commands i
 | `login` / `logout` | Authenticate (password via masked prompt; never on the CLI line) |
 | `register-device` | Store device token + key for session-token login |
 | `restore-session` | Resume from extension session JSON (`--from-json`) |
-| `sync` | Vault sync |
+| `sync` | Vault sync (`sync-down`, `d`) |
 | `vault summary` | Record / folder / team counts |
-| `records` | `list`, `get`, `find`, `share-info` |
-| `folders` | `list`, `tree`, `ls`, `pwd`, `cd`, `mkdir`, `rename`, `rmdir`, `get` |
-| `shared-folders` | Shared folders with optional `--verbose` counts |
-| `teams` | Enterprise `list`, `view` |
+| `get` | Record by UID or title (`--format`, `--unmask`) |
+| `list` | Vault records (uid + title) |
+| `ls`, `cd`, `tree`, `mkdir` | Folder navigation |
+| `search` | Find records by title |
+| `list-sf` | Shared folders (`--verbose` for counts) |
+| `list-team` | Enterprise teams |
+| `whoami` | Current account |
 | `users` | Enterprise `list`, `view` |
 
 Use `<command> --help` for full docs. Tab completes command names, subcommands, and flags.
@@ -124,7 +127,7 @@ The dev page runs the **Keeper SDK in the browser**. To avoid CORS locally, dev 
 
 ```text
 restore-session --from-json /dev/keeper-session.json --sync
-records list
+list
 ```
 
 Set region on the element when needed: `<web-console keeper-host="keepersecurity.eu">`.
