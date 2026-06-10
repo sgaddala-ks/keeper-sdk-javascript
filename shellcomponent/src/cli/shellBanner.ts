@@ -181,13 +181,6 @@ function notLoggedInMessages(cols: number, keeperHost?: string): string[] {
 
   if (keeperHost) {
     out.push(...wrapPlainText(`Region: ${keeperHost}`, cols));
-  } else {
-    for (const row of wrapPlainText(
-      "Set keeper-host on the element (or VITE_KEEPER_HOST) to override the default region.",
-      cols
-    )) {
-      out.push(dim(row));
-    }
   }
 
   if (cols >= 100) {

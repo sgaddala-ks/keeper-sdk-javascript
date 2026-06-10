@@ -193,6 +193,7 @@ export {
 export type {
     ListTeamsOptions,
     ListTeamRow,
+    ListTeamSort,
     TeamColumnInput,
     FormattedTeamsTable,
     FormatTeamsTableOptions,
