@@ -18,6 +18,8 @@ export {
     EMAIL_LIST_SEPARATOR_PATTERN,
     TOKEN_SEPARATOR_PATTERN,
     REGEX_ESCAPE_PATTERN,
+    TRAILING_EQUALS_PATTERN,
+    WHITESPACE_PATTERN,
     isValidEmail,
     escapeRegExp,
 } from './patterns'

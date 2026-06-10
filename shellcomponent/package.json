@@ -1,0 +1,55 @@
+{
+  "name": "@keeper-security/keeper-shell-component",
+  "version": "1.0.0",
+  "description": "Keeper web console: <web-console> / <keeper-shell> + CLI + Keeper JavaScript SDK (in-browser).",
+  "type": "module",
+  "main": "./dist/keeper-shell.es.js",
+  "module": "./dist/keeper-shell.es.js",
+  "types": "./keeper-shell.d.ts",
+  "exports": {
+    ".": {
+      "types": "./keeper-shell.d.ts",
+      "import": "./dist/keeper-shell.es.js",
+      "require": "./dist/keeper-shell.umd.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "keeper-shell.d.ts"
+  ],
+  "scripts": {
+    "clean": "rm -rf dist node_modules",
+    "rebuild": "npm run clean && npm install && npm run build:deps && npm run build",
+    "build:deps": "npm --prefix ../keeperapi run build && npm --prefix ../KeeperSdk run build",
+    "build:local-keeper-sdk": "npm --prefix ../KeeperSdk install && npm --prefix ../KeeperSdk run build",
+    "dev": "npm install && vite",
+    "dev:inspect": "npm install && node --inspect=9229 ./node_modules/vite/bin/vite.js",
+    "build": "npm run build:deps && vite build",
+    "prepublishOnly": "npm run build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@keeper-security/keeper-sdk-javascript": "file:../KeeperSdk",
+    "@keeper-security/keeperapi": "file:../keeperapi",
+    "protobufjs": "^7.2.4",
+    "@xterm/addon-fit": "^0.11.0",
+    "@xterm/xterm": "^6.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "buffer": "^6.0.3",
+    "http-proxy": "^1.18.1",
+    "@types/http-proxy": "^1.17.15",
+    "path-browserify": "^1.0.1",
+    "typescript": "~5.7.2",
+    "vite": "^6.0.3"
+  },
+  "keywords": [
+    "keeper",
+    "web-components",
+    "cli",
+    "xterm"
+  ],
+  "license": "ISC"
+}
