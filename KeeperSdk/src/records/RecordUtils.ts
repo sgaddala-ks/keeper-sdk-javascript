@@ -209,6 +209,22 @@ export function getRecordUrl(record: DRecord): string | undefined {
     return getRecordSummary(record).url
 }
 
+/** Commander-style list description (login @ url for most record types). */
+export function getRecordDescription(record: DRecord): string {
+    if (record.version === 6) return 'PAM Configuration'
+
+    const summary = getRecordSummary(record)
+    const parts: string[] = []
+    if (summary.login) parts.push(summary.login)
+    if (summary.url) parts.push(summary.url)
+    return parts.length > 0 ? parts.join(' @ ') : ''
+}
+
+/** Commander list column: Nested Share / Keeper Drive vs classic vault records. */
+export function getRecordCategory(record: DRecord): 'Classic' | 'Nested' {
+    return record.isKeeperDriveData ? 'Nested' : 'Classic'
+}
+
 const wordCache = new WeakMap<DRecord, string[]>()
 
 export function searchRecords(records: DRecord[], criteria: string): DRecord[] {
