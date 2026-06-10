@@ -106,7 +106,7 @@ async function runTree(host: KeeperCliHost, parsed: ParsedCli, cmd: string): Pro
     if (cap) return cap
     await v.sync()
     const folderPath = parsed.positional[0]
-    const out = await v.tree!(folderPath ? { folderPath } : {})
+    const out = await v.tree!(folderPath ? { folderPath, showRecords: true } : { showRecords: true })
     return { code: 0, out: out.endsWith('\n') ? out : out + '\n', err: '' }
 }
 
@@ -195,7 +195,8 @@ export const treeCommand: CliCommandDefinition = {
     help: {
         title: 'tree — folder structure (Keeper Commander)',
         synopsis: 'usage: tree [folder]',
-        description: '  Renders an ASCII tree of folders (and records) from PATH or the vault root.',
+        description:
+            '  Renders an ASCII tree from PATH or the vault root. Each node is tagged [folder], [shared folder], or [record].',
         seeAlso: '  ls, cd',
     },
     async run(host, parsed) {

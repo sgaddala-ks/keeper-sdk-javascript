@@ -4,9 +4,10 @@ import { formatDetailedHelpForCommand } from '../help'
 import { ensureCapability, ensureSession } from '../commandHelpers'
 import { formatTable } from '../table'
 import { getRecordTitle } from '../../records/RecordUtils'
+import { renderRecordsListTable } from '../../records/listRecordsTable'
 import { recordUid } from '../utils'
 import { formatSharedFoldersTable, renderSharedFoldersAsciiTable } from '../../sharedFolders/listSharedFolders'
-import { formatTeamsTable, renderTeamsAsciiTable } from '../../teams/listTeams'
+import { formatTeamsTable, renderTeamsAsciiTable, type ListTeamSort } from '../../teams/listTeams'
 
 async function runList(host: KeeperCliHost, parsed: ParsedCli): Promise<CliResult> {
     const r = await ensureSession(host)
@@ -14,14 +15,15 @@ async function runList(host: KeeperCliHost, parsed: ParsedCli): Promise<CliResul
     const v = host.getVault()
     await v.sync()
     const records = v.getRecords()
-    const rows = records.map((rec) => [recordUid(rec), getRecordTitle(rec)])
     if (hasOpt(parsed.opts, 'json')) {
         return { code: 0, out: JSON.stringify(records, null, 2) + '\n', err: '' }
     }
-    if (rows.length === 0) {
+    if (records.length === 0) {
         return { code: 0, out: '(no records)\n', err: '' }
     }
-    return { code: 0, out: formatTable(['record_uid', 'title'], rows), err: '' }
+    const verbose = hasOpt(parsed.opts, 'verbose') || hasOpt(parsed.opts, 'v')
+    const out = renderRecordsListTable(records, { verbose }) + '\n'
+    return { code: 0, out, err: '' }
 }
 
 async function runSearch(host: KeeperCliHost, parsed: ParsedCli): Promise<CliResult> {
@@ -70,6 +72,8 @@ async function runListSf(host: KeeperCliHost, parsed: ParsedCli): Promise<CliRes
     return { code: 0, out: renderSharedFoldersAsciiTable(table) + '\n', err: '' }
 }
 
+const LIST_TEAM_SORTS = new Set<ListTeamSort>(['company', 'team_uid', 'name'])
+
 async function runListTeam(host: KeeperCliHost, parsed: ParsedCli): Promise<CliResult> {
     const r = await ensureSession(host)
     if (r) return r
@@ -78,14 +82,34 @@ async function runListTeam(host: KeeperCliHost, parsed: ParsedCli): Promise<CliR
     if (cap) return cap
     await v.sync()
     const pattern = parsed.positional[0] ?? getOpt(parsed.opts, 'pattern') ?? null
-    const rows = await v.listTeams!({ pattern })
+    const sortRaw = getOpt(parsed.opts, 'sort')
+    const sort = sortRaw && LIST_TEAM_SORTS.has(sortRaw as ListTeamSort) ? (sortRaw as ListTeamSort) : undefined
+    if (sortRaw && !sort) {
+        return {
+            code: 1,
+            out: '',
+            err: 'list-team: --sort must be company, team_uid, or name\n',
+        }
+    }
+    const verbose = hasOpt(parsed.opts, 'verbose') || hasOpt(parsed.opts, 'v')
+    const veryVerbose = hasOpt(parsed.opts, 'very-verbose') || hasOpt(parsed.opts, 'vv')
+    const rows = await v.listTeams!({
+        pattern,
+        all: hasOpt(parsed.opts, 'all') || hasOpt(parsed.opts, 'a'),
+        verbose,
+        veryVerbose,
+        sort,
+    })
     if (hasOpt(parsed.opts, 'json')) {
         return { code: 0, out: JSON.stringify(rows, null, 2) + '\n', err: '' }
     }
     if (rows.length === 0) {
         return { code: 0, out: pattern ? `(no teams matched "${pattern}")\n` : '(no teams)\n', err: '' }
     }
-    const table = formatTeamsTable(rows)
+    const table = formatTeamsTable(rows, {
+        style: 'commander',
+        showMember: verbose || veryVerbose,
+    })
     return { code: 0, out: renderTeamsAsciiTable(table) + '\n', err: '' }
 }
 
@@ -113,13 +137,15 @@ export const listCommand: CliCommandDefinition = {
     name: 'list',
     order: 14,
     aliases: ['l'],
-    description: 'List all vault records (uid and title).',
-    usage: 'list [--json]',
-    flagOptions: ['--json'],
+    description: 'List all vault records (Commander table).',
+    usage: 'list [--verbose|-v] [--json]',
+    flagOptions: ['--json', '--verbose', '-v'],
     help: {
         title: 'list — all records (Keeper Commander)',
-        synopsis: 'usage: list [--json]',
-        description: '  Syncs and prints every record uid + title in the vault.',
+        synopsis: 'usage: list [--verbose]',
+        description:
+            '  Syncs and prints every record in a Commander-style table: uid, type, title, description, shared, and record category.',
+        options: '  --verbose, -v   Do not truncate long columns (default max width 40).',
         seeAlso: '  get, search, ls',
     },
     async run(host, parsed) {
@@ -182,12 +208,28 @@ export const listTeamCommand: CliCommandDefinition = {
     name: 'list-team',
     order: 17,
     aliases: ['lt'],
-    description: 'List teams.',
-    usage: 'list-team [pattern] [--json]',
-    flagOptions: ['--json', '--pattern'],
+    description: 'List teams (Commander table).',
+    usage: 'list-team [pattern] [--all|-a] [--verbose|-v] [--very-verbose|-vv] [--sort company|team_uid|name] [--json]',
+    flagOptions: [
+        '--json',
+        '--pattern',
+        '--all',
+        '-a',
+        '--verbose',
+        '-v',
+        '--very-verbose',
+        '-vv',
+        '--sort',
+    ],
     help: {
         title: 'list-team — teams (Keeper Commander)',
-        synopsis: 'usage: list-team [pattern]',
+        synopsis: 'usage: list-team [pattern] [--all] [--verbose]',
+        description:
+            '  Lists teams from share contacts. Default: primary organization only. --all includes teams from other enterprises.',
+        options: `  --all, -a           All teams in contacts (not just primary org)
+  --verbose, -v       Include Member column (enterprise cache)
+  --very-verbose, -vv Fetch members via API when not cached
+  --sort              company (default), team_uid, or name`,
         seeAlso: '  get, whoami',
     },
     async run(host, parsed) {

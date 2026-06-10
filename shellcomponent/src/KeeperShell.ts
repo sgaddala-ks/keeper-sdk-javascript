@@ -678,18 +678,120 @@ export class KeeperShell extends HTMLElement {
       }
     };
 
-    const writePromptLine = (): void => {
+    const echoChar = (ch: string): string => (maskDisplayActive() ? "*" : ch);
+
+    const totalDisplayChars = (lineLen: number): number => promptPrefix().length + lineLen;
+
+    const paintPromptLine = (): void => {
       const line = this._lineBuf;
       if (cursorPos < 0) cursorPos = 0;
       if (cursorPos > line.length) cursorPos = line.length;
       const visible = maskDisplayActive() ? "*".repeat(line.length) : line;
       const prefix = promptPrefix();
       const displayChars = prefix.length + visible.length;
-      clearPromptRows();
       term.write(`${prefix}${visible}`);
       promptRows = promptDisplayRows(displayChars, term.cols);
       const back = line.length - cursorPos;
       if (back > 0) term.write(`\x1b[${back}D`);
+    };
+
+    const writePromptLine = (): void => {
+      clearPromptRows();
+      paintPromptLine();
+    };
+
+    /** Extend the line at end without clearing the prompt (typing / tab completion). */
+    const applyLineAtEnd = (newLine: string): void => {
+      const oldLine = this._lineBuf;
+      if (cursorPos !== oldLine.length) {
+        this._lineBuf = newLine;
+        cursorPos = newLine.length;
+        writePromptLine();
+        return;
+      }
+      const suffix = newLine.slice(oldLine.length);
+      this._lineBuf = newLine;
+      cursorPos = newLine.length;
+      if (!suffix) return;
+      const oldRows = promptRows;
+      const newRows = promptDisplayRows(totalDisplayChars(this._lineBuf.length), term.cols);
+      if (newRows < oldRows) {
+        writePromptLine();
+        return;
+      }
+      term.write(maskDisplayActive() ? "*".repeat(suffix.length) : suffix);
+      promptRows = newRows;
+    };
+
+    /** Append at end of line without clearing the whole prompt (avoids flicker). */
+    const appendAtEnd = (ch: string): void => {
+      const oldRows = promptRows;
+      this._lineBuf += ch;
+      cursorPos = this._lineBuf.length;
+      const newRows = promptDisplayRows(totalDisplayChars(this._lineBuf.length), term.cols);
+      if (newRows < oldRows) {
+        writePromptLine();
+        return;
+      }
+      term.write(echoChar(ch));
+      promptRows = newRows;
+    };
+
+    /** Backspace at end of line without full redraw when possible. */
+    const backspaceAtEnd = (): void => {
+      if (cursorPos <= 0) return;
+      const oldRows = promptRows;
+      const line = this._lineBuf;
+      if (cursorPos < line.length) {
+        this._lineBuf = line.slice(0, cursorPos - 1) + line.slice(cursorPos);
+        cursorPos--;
+        writePromptLine();
+        return;
+      }
+      this._lineBuf = line.slice(0, -1);
+      cursorPos = this._lineBuf.length;
+      const newRows = promptDisplayRows(totalDisplayChars(this._lineBuf.length), term.cols);
+      if (newRows < oldRows) {
+        writePromptLine();
+        return;
+      }
+      term.write("\b \b");
+      promptRows = newRows;
+    };
+
+    const moveCursorLeft = (): void => {
+      if (cursorPos <= 0) {
+        term.write("\x07");
+        return;
+      }
+      cursorPos--;
+      term.write("\x1b[D");
+    };
+
+    const moveCursorRight = (): void => {
+      if (cursorPos >= this._lineBuf.length) {
+        term.write("\x07");
+        return;
+      }
+      cursorPos++;
+      term.write("\x1b[C");
+    };
+
+    const insertInMiddle = (ch: string): void => {
+      const line = this._lineBuf;
+      this._lineBuf = line.slice(0, cursorPos) + ch + line.slice(cursorPos);
+      cursorPos++;
+      writePromptLine();
+    };
+
+    const deleteForward = (): void => {
+      const line = this._lineBuf;
+      if (cursorPos >= line.length) {
+        term.write("\x07");
+        return;
+      }
+      this._lineBuf = line.slice(0, cursorPos) + line.slice(cursorPos + 1);
+      writePromptLine();
     };
 
     const resetHistoryNav = (): void => {
@@ -764,21 +866,17 @@ export class KeeperShell extends HTMLElement {
           return;
         }
         if (candidates.length === 1) {
-          this._lineBuf = base + candidates[0];
-          cursorPos = this._lineBuf.length;
-          writePromptLine();
+          applyLineAtEnd(base + candidates[0]);
           return;
         }
         const lcp = longestCommonPrefix(candidates);
         if (lcp.length > partial.length) {
-          this._lineBuf = base + lcp;
-          cursorPos = this._lineBuf.length;
-          writePromptLine();
+          applyLineAtEnd(base + lcp);
           return;
         }
         term.writeln("");
         term.writeln(`\x1b[90m${candidates.join(" ")}\x1b[0m`);
-        writePromptLine();
+        paintPromptLine();
       } catch {
         term.write("\x07");
       } finally {
@@ -840,61 +938,32 @@ export class KeeperShell extends HTMLElement {
 
     const handleDataChunk = async (data: string): Promise<void> => {
       const tokens = feedInput(data, inputCarry);
-      let redrawPrompt = false;
-      const flushRedraw = (): void => {
-        if (redrawPrompt) {
-          writePromptLine();
-          redrawPrompt = false;
-        }
-      };
       for (const tok of tokens) {
         if (tok.k === "up") {
-          flushRedraw();
           historyOlder();
           continue;
         }
         if (tok.k === "down") {
-          flushRedraw();
           historyNewer();
           continue;
         }
         if (tok.k === "left") {
           bumpEditing();
-          if (cursorPos > 0) {
-            cursorPos--;
-            redrawPrompt = true;
-          } else {
-            flushRedraw();
-            term.write("\x07");
-          }
+          moveCursorLeft();
           continue;
         }
         if (tok.k === "right") {
           bumpEditing();
-          if (cursorPos < this._lineBuf.length) {
-            cursorPos++;
-            redrawPrompt = true;
-          } else {
-            flushRedraw();
-            term.write("\x07");
-          }
+          moveCursorRight();
           continue;
         }
         if (tok.k === "del") {
           bumpEditing();
-          if (cursorPos < this._lineBuf.length) {
-            const line = this._lineBuf;
-            this._lineBuf = line.slice(0, cursorPos) + line.slice(cursorPos + 1);
-            redrawPrompt = true;
-          } else {
-            flushRedraw();
-            term.write("\x07");
-          }
+          deleteForward();
           continue;
         }
         const ch = tok.v;
         if (ch === "\r" || ch === "\n") {
-          redrawPrompt = false;
           term.write("\r\n");
           promptRows = 1;
           await flushLine();
@@ -902,21 +971,14 @@ export class KeeperShell extends HTMLElement {
         }
         if (ch === "\u007f" || ch === "\b") {
           bumpEditing();
-          if (cursorPos > 0) {
-            const line = this._lineBuf;
-            this._lineBuf = line.slice(0, cursorPos - 1) + line.slice(cursorPos);
-            cursorPos--;
-            redrawPrompt = true;
-          }
+          backspaceAtEnd();
           continue;
         }
         if (ch === "\t") {
-          flushRedraw();
           await runTabComplete();
           continue;
         }
         if (ch === "\x0f") {
-          flushRedraw();
           if (pendingLoginUsername === null) {
             maskSensitive = !maskSensitive;
           }
@@ -924,7 +986,6 @@ export class KeeperShell extends HTMLElement {
           continue;
         }
         if (ch === "\x03") {
-          redrawPrompt = false;
           this._lineBuf = "";
           cursorPos = 0;
           pendingLoginUsername = null;
@@ -938,11 +999,12 @@ export class KeeperShell extends HTMLElement {
         if (code < 32) continue;
         bumpEditing();
         const line = this._lineBuf;
-        this._lineBuf = line.slice(0, cursorPos) + ch + line.slice(cursorPos);
-        cursorPos++;
-        redrawPrompt = true;
+        if (cursorPos === line.length) {
+          appendAtEnd(ch);
+        } else {
+          insertInMiddle(ch);
+        }
       }
-      flushRedraw();
     };
 
     term.onData((data) => {
