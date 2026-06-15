@@ -1,6 +1,6 @@
 # Keeper SDK Examples
 
-Interactive examples demonstrating the Keeper JavaScript SDK.
+Interactive examples demonstrating the Keeper JavaScript SDK and the built-in shell CLI.
 
 ## Prerequisites
 
@@ -26,58 +26,112 @@ Examples use `~/.keeper/config.json` for saved credentials and persistent login.
 
 For restore-session flows, provide a path to session JSON (extension `SessionParams` shape). There is no default path.
 
- ## Available Examples
+## Built-in shell CLI
+
+These commands are registered in `KeeperSdk/src/cli` and run via `dispatchCliLine` (see `records:list:shell-cli`).
+
+**Before login**
+
+| Command | Description |
+|---------|-------------|
+| `help` | List commands or show docs (`help get`, `get --help`) |
+| `login` | Password or session-token login |
+| `restore-session` | Restore from extension `SessionParams` JSON or flags |
+
+**After login**
+
+| Command | Aliases | Description |
+|---------|---------|-------------|
+| `logout` | — | End session |
+| `sync` | `syncdown`, `sync-down`, `d` | Sync vault from Keeper |
+| `whoami` | — | Current user and vault counts |
+| `list` | `l` | All records (table) |
+| `search` | `s` | Search records by text |
+| `get` | `g` | Record or folder details |
+| `ls` | — | List folder contents |
+| `cd` | — | Change current folder |
+| `tree` | — | Folder tree |
+| `mkdir` | — | Create folder (`-sf` for shared folder) |
+| `list-sf` | `lsf` | List shared folders |
+| `vault summary` | — | Vault counts |
+
+Write operations (add/update/delete records, share, rename folder, …) are **SDK API only** — use the npm scripts below, not shell commands.
+
+### Shell CLI examples
+
+```bash
+# Restore session then list records (dispatchCliLine path)
+npm run records:list:shell-cli -- --from-json /path/to/session.json [--host keepersecurity.eu]
+
+# Restore-session via SDK example script
+npm run auth:restore-session
+```
+
+## SDK programmatic examples
+
+These scripts call `KeeperVault` directly. They are not shell commands.
 
 ### Authentication
 
 | Command | Description |
-|---|---|
-| `npm run auth:login` | Master password login with retry logic, masked input, and vault sync. Automatically attempts persistent login (via clone code from `~/.keeper/config.json`) before falling back to the password prompt. |
-| `npm run auth:session-token` | Login using an existing session token for pre-authenticated workflows. Prompts for username, host, and session token. Requires device token + private key in `~/.keeper/config.json` or use `auth:register-device` first in the same run. |
-| `npm run auth:register-device` | Store device token + device private key on a `KeeperVault` (in-memory), optionally then `loginWithSessionToken` + sync. |
-| `npm run auth:restore-session` | Restore via SDK `restore-session` CLI dispatch (same path as shellcomponent). Prompts for session JSON path. |
+|---------|-------------|
+| `npm run auth:login` | Master password login with retry, masked input, and vault sync |
+| `npm run auth:session-token` | Session-token login; requires device keys in `~/.keeper/config.json` |
+| `npm run auth:register-device` | Store device token + private key on vault (API helper for session-token login) |
+| `npm run auth:restore-session` | Restore session via `restore-session` CLI dispatch |
 
 ### Records
 
 | Command | Description |
-|---|---|
-| `npm run records:list` | List all records in the vault (password / persistent login via `login()`) |
-| `npm run records:get` | Get details of a specific record by UID or title |
-| `npm run records:add` | Add a new typed record to the vault |
-| `npm run records:update` | Update fields on an existing record |
-| `npm run records:delete` | Delete a record (with confirmation prompt) |
-| `npm run records:history` | View revision history for a record |
-| `npm run records:find-password` | Find a record's password and copy it to clipboard |
-| `npm run records:move` | Move a record to a different folder |
+|---------|-------------|
+| `npm run records:list` | List all records |
+| `npm run records:list:shell-cli` | List via shell CLI dispatch |
+| `npm run records:get` | Get record by UID or title |
+| `npm run records:add` | Add a typed record |
+| `npm run records:update` | Update record fields |
+| `npm run records:delete` | Delete a record |
+| `npm run records:history` | Record revision history |
+| `npm run records:find-password` | Find password and copy to clipboard |
+| `npm run records:move` | Move record to another folder |
 
-### Sharing
+### Folders
 
 | Command | Description |
-|---|---|
-| `npm run sharing:share-record` | Share a record with another Keeper user |
+|---------|-------------|
+| `npm run folders:ls` | List folder contents |
+| `npm run folders:cd` | Change directory |
+| `npm run folders:get` | Get folder details |
+| `npm run folders:mkdir` | Create folder |
+| `npm run folders:updatedir` | Rename or update folder |
+| `npm run folders:removedir` | Remove folder |
+| `npm run folders:tree` | Folder tree |
+
+### Shared folders & sharing
+
+| Command | Description |
+|---------|-------------|
+| `npm run shared-folders:list-sf` | List shared folders |
+| `npm run shared-folders:share-folder` | Share a folder |
+| `npm run sharing:share-record` | Share a record |
+
+### Enterprise (SDK API only)
+
+Teams, users, and roles scripts (`teams:*`, `users:*`, `roles:*`) use the SDK enterprise APIs. They are not registered as shell commands in this release.
 
 ## Usage
-
-Run any example with `npm run <script>`:
 
 ```bash
 npm run auth:login
 npm run records:list
-npm run records:get
+npm run folders:ls
 ```
 
-Most examples will log in automatically using persistent login (if configured) or prompt for credentials. After authentication, follow the interactive prompts.
+Most examples log in via persistent login or prompt for credentials.
 
-**Restore-session** on `records:list` (requires `--from-json`):
+**Restore-session on `records:list`:**
 
 ```bash
 npm run records:list -- --restore-session --from-json /path/to/session.json [--host keepersecurity.eu] [--no-sync]
 ```
 
-**Shell-parity debug** — same dispatch path as `<keeper-shell>` (uses `dispatchCliLine` → `restore-session`):
-
-```bash
-npm run records:list:shell-cli -- --from-json /path/to/session.json [--host keepersecurity.eu]
-```
-
-If Node works but the browser shell fails, suspect host I/O (`readTextFile` / Vite `/@fs`), CORS, or region — not `KeeperVault.restoreSession` itself.
+If Node shell CLI works but the browser shell fails, suspect host I/O (`readTextFile` / Vite `/@fs`), CORS, or region — not `KeeperVault.restoreSession` itself.

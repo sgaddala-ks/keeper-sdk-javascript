@@ -26,7 +26,7 @@ async function runSummary(host: KeeperCliHost, parsed: ParsedCli): Promise<CliRe
 export const vaultCommand: CliCommandDefinition = {
     name: 'vault',
     order: 25,
-    description: 'Vault summary counts (records, folders, teams, …).',
+    description: 'Vault summary counts (records, folders, shared folders).',
     usage: 'vault summary [--json] [--help|-h]',
     subcommands: ['summary'],
     flagOptions: ['--json'],
@@ -34,7 +34,7 @@ export const vaultCommand: CliCommandDefinition = {
         title: 'vault — vault-wide statistics',
         synopsis: '  vault summary [--json]',
         description: '  Runs sync, then prints counts from the local vault cache.',
-        arguments: '  summary   Print record, shared folder, team, and user-folder counts.',
+        arguments: '  summary   Print record, shared folder, and user-folder counts.',
         options: '  --json      Emit JSON.\n  --help, -h  Show this help.',
         examples: '  vault summary\n  vault summary --json',
         seeAlso: '  sync, list, tree, whoami',

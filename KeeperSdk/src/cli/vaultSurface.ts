@@ -2,7 +2,7 @@
 export const KEEPER_VAULT_SURFACE = `
 KeeperVault (JavaScript SDK) — operations available in code (not all exposed as CLI yet):
 
-  Session: login, loginWithSessionToken, logout, resumeSession, sync, disconnect, registerDevice
+  Session: login, loginWithSessionToken, logout, resumeSession, sync, disconnect
   Records: getRecords, findRecord, findRecords, getRecordByUid, getRecordsByType,
            addRecord, updateRecord, deleteRecord, moveRecord, getRecordHistory,
            printRecords

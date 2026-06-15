@@ -68,7 +68,6 @@ function asCliVault(v: VaultInstance): KeeperCliVault {
         sync: () => v.sync(),
         getRecords: () => v.getRecords(),
         getSharedFolders: () => v.getSharedFolders(),
-        registerDevice: (dt, pk, o) => v.registerDevice(dt, pk, o),
         restoreSession: (input) => v.restoreSession(input),
         getSummary: () => v.getSummary(),
         findRecord: (uidOrTitle) => v.findRecord(uidOrTitle),
@@ -84,10 +83,6 @@ function asCliVault(v: VaultInstance): KeeperCliVault {
         mkdir: (path, options) => v.mkdir(path, options),
         renameFolder: (path, name) => v.renameFolder(path, name),
         rmdir: (patterns, options) => v.rmdir(patterns, options),
-        listTeams: (options) => v.listTeams(options),
-        viewTeam: (id) => v.viewTeam(id),
-        listUsers: (options) => v.listUsers(options),
-        viewUser: (id) => v.viewUser(id),
     }
 }
 

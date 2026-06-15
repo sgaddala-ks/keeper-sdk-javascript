@@ -26,7 +26,7 @@ export const getCommand: CliCommandDefinition = {
         examples: `  get "Amazon"
   get AbCdEf123456 --format json --unmask
   get MyFolderUid --format json`,
-        seeAlso: '  ls, search, record-update',
+        seeAlso: '  ls, search, list',
     },
     async run(host, parsed) {
         if (wantsCliHelp(parsed)) {

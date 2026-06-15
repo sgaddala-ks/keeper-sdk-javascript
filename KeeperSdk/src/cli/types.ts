@@ -37,7 +37,6 @@ export type KeeperCliVault = {
     sync(): Promise<SyncResult>
     getRecords(): DRecord[]
     getSharedFolders(): DSharedFolder[]
-    registerDevice(deviceToken: string, privateKey: string, options?: { username?: string }): Promise<void>
     restoreSession(input: SessionRestoreInput): Promise<void>
     getSummary?: () => VaultSummary
     findRecord?: (uidOrTitle: string) => DRecord | undefined
