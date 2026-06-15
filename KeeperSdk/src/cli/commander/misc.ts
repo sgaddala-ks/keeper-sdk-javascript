@@ -7,7 +7,6 @@ import { getRecordTitle } from '../../records/RecordUtils'
 import { renderRecordsListTable } from '../../records/listRecordsTable'
 import { recordUid } from '../utils'
 import { formatSharedFoldersTable, renderSharedFoldersAsciiTable } from '../../sharedFolders/listSharedFolders'
-import { formatTeamsTable, renderTeamsAsciiTable, type ListTeamSort } from '../../teams/listTeams'
 
 async function runList(host: KeeperCliHost, parsed: ParsedCli): Promise<CliResult> {
     const r = await ensureSession(host)
@@ -72,47 +71,6 @@ async function runListSf(host: KeeperCliHost, parsed: ParsedCli): Promise<CliRes
     return { code: 0, out: renderSharedFoldersAsciiTable(table) + '\n', err: '' }
 }
 
-const LIST_TEAM_SORTS = new Set<ListTeamSort>(['company', 'team_uid', 'name'])
-
-async function runListTeam(host: KeeperCliHost, parsed: ParsedCli): Promise<CliResult> {
-    const r = await ensureSession(host)
-    if (r) return r
-    const v = host.getVault()
-    const cap = ensureCapability(v, 'listTeams', 'list-team')
-    if (cap) return cap
-    await v.sync()
-    const pattern = parsed.positional[0] ?? getOpt(parsed.opts, 'pattern') ?? null
-    const sortRaw = getOpt(parsed.opts, 'sort')
-    const sort = sortRaw && LIST_TEAM_SORTS.has(sortRaw as ListTeamSort) ? (sortRaw as ListTeamSort) : undefined
-    if (sortRaw && !sort) {
-        return {
-            code: 1,
-            out: '',
-            err: 'list-team: --sort must be company, team_uid, or name\n',
-        }
-    }
-    const verbose = hasOpt(parsed.opts, 'verbose') || hasOpt(parsed.opts, 'v')
-    const veryVerbose = hasOpt(parsed.opts, 'very-verbose') || hasOpt(parsed.opts, 'vv')
-    const rows = await v.listTeams!({
-        pattern,
-        all: hasOpt(parsed.opts, 'all') || hasOpt(parsed.opts, 'a'),
-        verbose,
-        veryVerbose,
-        sort,
-    })
-    if (hasOpt(parsed.opts, 'json')) {
-        return { code: 0, out: JSON.stringify(rows, null, 2) + '\n', err: '' }
-    }
-    if (rows.length === 0) {
-        return { code: 0, out: pattern ? `(no teams matched "${pattern}")\n` : '(no teams)\n', err: '' }
-    }
-    const table = formatTeamsTable(rows, {
-        style: 'commander',
-        showMember: verbose || veryVerbose,
-    })
-    return { code: 0, out: renderTeamsAsciiTable(table) + '\n', err: '' }
-}
-
 async function runWhoami(host: KeeperCliHost): Promise<CliResult> {
     const v = host.getVault()
     if (!v.isLoggedIn) {
@@ -126,8 +84,7 @@ async function runWhoami(host: KeeperCliHost): Promise<CliResult> {
         lines.push(
             `records: ${summary.recordCount}`,
             `folders: ${summary.folderCount}`,
-            `shared_folders: ${summary.sharedFolderCount}`,
-            `teams: ${summary.teamCount}`
+            `shared_folders: ${summary.sharedFolderCount}`
         )
     }
     return { code: 0, out: lines.join('\n') + '\n', err: '' }
@@ -200,44 +157,6 @@ export const listSfCommand: CliCommandDefinition = {
             return await runListSf(host, parsed)
         } catch (e) {
             return { code: 1, out: '', err: host.formatError('list-sf', e) }
-        }
-    },
-}
-
-export const listTeamCommand: CliCommandDefinition = {
-    name: 'list-team',
-    order: 17,
-    aliases: ['lt'],
-    description: 'List teams (Commander table).',
-    usage: 'list-team [pattern] [--all|-a] [--verbose|-v] [--very-verbose|-vv] [--sort company|team_uid|name] [--json]',
-    flagOptions: [
-        '--json',
-        '--pattern',
-        '--all',
-        '-a',
-        '--verbose',
-        '-v',
-        '--very-verbose',
-        '-vv',
-        '--sort',
-    ],
-    help: {
-        title: 'list-team — teams (Keeper Commander)',
-        synopsis: 'usage: list-team [pattern] [--all] [--verbose]',
-        description:
-            '  Lists teams from share contacts. Default: primary organization only. --all includes teams from other enterprises.',
-        options: `  --all, -a           All teams in contacts (not just primary org)
-  --verbose, -v       Include Member column (enterprise cache)
-  --very-verbose, -vv Fetch members via API when not cached
-  --sort              company (default), team_uid, or name`,
-        seeAlso: '  get, whoami',
-    },
-    async run(host, parsed) {
-        if (wantsCliHelp(parsed)) return { code: 0, out: formatDetailedHelpForCommand(listTeamCommand), err: '' }
-        try {
-            return await runListTeam(host, parsed)
-        } catch (e) {
-            return { code: 1, out: '', err: host.formatError('list-team', e) }
         }
     },
 }

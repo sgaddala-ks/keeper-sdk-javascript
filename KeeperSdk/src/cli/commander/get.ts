@@ -7,15 +7,15 @@ export const getCommand: CliCommandDefinition = {
     name: 'get',
     order: 10,
     aliases: ['g'],
-    description: 'Get details of a record, folder, or team by UID or title.',
+    description: 'Get details of a record or folder by UID or title.',
     usage: 'get <uid|title> [--format {detail,json,password,fields}] [--unmask]',
     flagOptions: ['--format', '--unmask', '--detail', '--json'],
     help: {
-        title: 'get — record/folder/team details (Keeper Commander)',
+        title: 'get — record/folder details (Keeper Commander)',
         synopsis: 'usage: get [--unmask] [--format {detail,json,password,fields}] uid',
         description:
-            '  Resolves a vault object by UID or title. Records support all output formats; folders and teams support detail/json.',
-        arguments: '  uid    Record, folder, or team UID or title.',
+            '  Resolves a vault object by UID or title. Records support all output formats; folders support detail/json.',
+        arguments: '  uid    Record or folder UID or title.',
         options: `  --format {detail,json,password,fields}
                  detail (default): human-readable output.
                  json: JSON object.

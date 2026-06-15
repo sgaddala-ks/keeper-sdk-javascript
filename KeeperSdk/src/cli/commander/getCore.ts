@@ -3,9 +3,7 @@ import {
     formatRecord,
     formatRecordFields,
     getRecordPassword,
-    getRecordTitle,
 } from '../../records/RecordUtils'
-import { formatTeamView, teamViewTable } from '../../teams/viewTeam'
 import type { CliResult, KeeperCliHost, ParsedCli } from '../types'
 import { getOpt, hasOpt } from '../parse'
 import { ensureCapability, ensureSession } from '../commandHelpers'
@@ -79,29 +77,6 @@ async function tryGetFolder(
     }
 }
 
-async function tryGetTeam(
-    host: KeeperCliHost,
-    target: string,
-    fmt: GetOutputFormat,
-    cmd: string
-): Promise<CliResult | null> {
-    const v = host.getVault()
-    if (!v.viewTeam) return null
-    try {
-        const view = await v.viewTeam(target)
-        if (fmt === 'json') {
-            return { code: 0, out: JSON.stringify(view, null, 2) + '\n', err: '' }
-        }
-        if (fmt === 'password' || fmt === 'fields') {
-            return { code: 1, out: '', err: `${cmd}: --format ${fmt} applies to records only\n` }
-        }
-        const formatted = formatTeamView(view, { verbose: true })
-        return { code: 0, out: teamViewTable(formatted) + '\n', err: '' }
-    } catch {
-        return null
-    }
-}
-
 async function tryGetSharedFolderByUid(
     host: KeeperCliHost,
     target: string,
@@ -120,7 +95,7 @@ async function tryGetSharedFolderByUid(
     return { code: 0, out: `${hit.name ?? '(unnamed)'}\t${hit.uid}\n`, err: '' }
 }
 
-/** Commander-style `get` (record, folder, team, or shared folder by UID/title). */
+/** Commander-style `get` (record, folder, or shared folder by UID/title). */
 export async function executeGet(host: KeeperCliHost, parsed: ParsedCli, cmd = 'get'): Promise<CliResult> {
     const target = getGetTarget(parsed)
     if (!target) {
@@ -139,9 +114,6 @@ export async function executeGet(host: KeeperCliHost, parsed: ParsedCli, cmd = '
 
     const folder = await tryGetFolder(host, target, fmt, cmd)
     if (folder) return folder
-
-    const team = await tryGetTeam(host, target, fmt, cmd)
-    if (team) return team
 
     const cap = ensureCapability(v, 'findRecord', cmd)
     if (cap) return cap

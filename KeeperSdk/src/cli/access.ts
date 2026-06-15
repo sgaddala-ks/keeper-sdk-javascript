@@ -6,7 +6,6 @@ export const AUTH_CLI_COMMAND_NAMES = new Set<string>([
     'help',
     'login',
     'restore-session',
-    'register-device',
 ])
 
 export function isAuthCliCommand(name: string): boolean {

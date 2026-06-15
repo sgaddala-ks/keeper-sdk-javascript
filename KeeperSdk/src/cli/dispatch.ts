@@ -7,7 +7,7 @@ import { isAuthCliCommand } from './access'
 import { getCliCommand } from './registry'
 
 const NOT_LOGGED_IN_ERR =
-    'Not logged in. Run `login`, `restore-session`, or `register-device` (see `help`).\n'
+    'Not logged in. Run `login` or `restore-session` (see `help`).\n'
 
 export async function dispatchKeeperCli(
     commandName: string,

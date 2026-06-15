@@ -44,7 +44,7 @@ export const helpCommand: CliCommandDefinition = {
                 out: formatAllCommandsSummary(visible, {
                     header: 'Not logged in — sign-in commands:\n\n',
                     footer:
-                        '\nRun `login`, `restore-session`, or `register-device` to open the vault.\n' +
+                        '\nRun `login` or `restore-session` to open the vault.\n' +
                         'After login, run `help` again for vault commands (get, ls, cd, …).\n',
                 }),
                 err: '',
@@ -60,7 +60,7 @@ export const helpCommand: CliCommandDefinition = {
                 out: '',
                 err:
                     `help: "${name}" requires a logged-in session. ` +
-                    'Run `help` for sign-in commands (login, restore-session, register-device).\n',
+                    'Run `help` for sign-in commands (login, restore-session).\n',
             }
         }
         const long = getDetailedHelpPageForRegistry(visible, name)

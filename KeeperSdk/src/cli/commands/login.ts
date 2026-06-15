@@ -164,8 +164,8 @@ export const loginCommand: CliCommandDefinition = {
   before login (same idea as the session_token_login example).
 
   Device registration: session token login requires deviceToken + privateKey for
-  this host in session storage. Use register-device (or a prior password login in
-  this shell) to store them; see register-device --help.`,
+  this host in session storage (e.g. ~/.keeper/config.json) or a prior password
+  login in this shell.`,
         options: `  --username, --user           Account identifier (often email).
   --session-token, --token, --st   Session token string (or use KEEPER_SESSION_TOKEN).
   --session-token-plain        Treat --session-token value as plain UTF-8 and encode base64url.`,

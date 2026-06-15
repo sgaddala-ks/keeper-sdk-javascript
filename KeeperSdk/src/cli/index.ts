@@ -78,9 +78,7 @@ export {
 } from './commands/login'
 
 export { runLogoutCommand, logoutCommand } from './commands/logout'
-export { usersCommand } from './commands/users'
 export { vaultCommand } from './commands/vault'
-export { registerDeviceCommand } from './commands/registerDevice'
 export { helpCommand } from './commands/help'
 export { restoreSessionCommand } from './commands/restoreSession'
 export { syncCommand, runVaultSync } from './commands/sync'
@@ -93,7 +91,6 @@ export {
     listCommand,
     searchCommand,
     listSfCommand,
-    listTeamCommand,
     whoamiCommand,
     lsCommand,
     cdCommand,

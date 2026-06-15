@@ -7,7 +7,7 @@ import { BUILTIN_CLI_COMMANDS } from './builtinCommands'
 import { formatAllCommandsSummary, formatDetailedHelpForCommand, formatShortCommandSummary } from './help'
 
 const NOT_LOGGED_IN_ERR =
-    'Not logged in. Run `login`, `restore-session`, or `register-device` (see `help`).\n'
+    'Not logged in. Run `login` or `restore-session` (see `help`).\n'
 
 export type KeeperCliParserOptions = {
     prog?: string
@@ -76,7 +76,7 @@ export class KeeperCliParser {
             : formatAllCommandsSummary(commands, {
                   header: 'Not logged in — sign-in commands:\n\n',
                   footer:
-                      '\nRun `login`, `restore-session`, or `register-device` to open the vault.\n' +
+                      '\nRun `login` or `restore-session` to open the vault.\n' +
                       'After login, run `help` again for vault commands (get, ls, cd, …).\n',
               })
         const footer = this.epilog ? `\n${this.epilog}\n` : ''

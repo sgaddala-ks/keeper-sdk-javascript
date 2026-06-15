@@ -12,7 +12,6 @@ import {
     type EnterpriseUser,
     type GetEnterpriseDataResponse,
 } from './enterpriseData'
-import { fetchShareObjects, fetchTeamMemberEmails, resolvePrimaryEnterpriseId } from './shareTeams'
 
 export enum TeamColumn {
     Restricts = 'restricts',
@@ -47,27 +46,14 @@ const HEADER_BY_COLUMN: Record<TeamColumn, string> = {
     [TeamColumn.Roles]: 'Roles',
 }
 
-export type ListTeamSort = 'company' | 'team_uid' | 'name'
-
 export type ListTeamsOptions = {
     pattern?: string | null
-    /** Show teams from all enterprises in contacts (Commander --all). Default: primary org only. */
-    all?: boolean
-    /** Include Member column from enterprise cache (Commander -v). */
-    verbose?: boolean
-    /** Fetch members via vault/get_team_members when not cached (Commander -vv). */
-    veryVerbose?: boolean
-    sort?: ListTeamSort
-    /** Enterprise admin detail columns; when set, uses get_enterprise_data instead of share objects. */
     columns?: TeamColumnInput[] | typeof ALL_COLUMNS_WILDCARD | string | null
 }
 
 export type ListTeamRow = {
     team_uid: string
     name: string
-    company?: string
-    enterprise_id?: number
-    member?: string
     restricts?: string
     node?: string
     user_count?: number
@@ -83,9 +69,6 @@ export type FormattedTeamsTable = {
 
 export type FormatTeamsTableOptions = {
     columns?: ListTeamsOptions['columns']
-    /** Commander -v / -vv: show Member column. */
-    showMember?: boolean
-    style?: 'commander' | 'enterprise'
 }
 
 type DecorateContext = {
@@ -105,49 +88,6 @@ export function formatTeamRestricts(team: EnterpriseTeamRecord): string {
 }
 
 export async function listTeams(auth: Auth, options: ListTeamsOptions = {}): Promise<ListTeamRow[]> {
-    if (options.columns != null) {
-        return listTeamsEnterprise(auth, options)
-    }
-    return listTeamsCommander(auth, options)
-}
-
-async function listTeamsCommander(auth: Auth, options: ListTeamsOptions): Promise<ListTeamRow[]> {
-    const [shareObjects, primaryEnterpriseId] = await Promise.all([
-        fetchShareObjects(auth),
-        resolvePrimaryEnterpriseId(auth),
-    ])
-    const showAll = options.all === true
-    const pattern = options.pattern?.trim() || null
-    const showMembers = options.verbose === true || options.veryVerbose === true
-
-    const rows: ListTeamRow[] = []
-    for (const team of shareObjects.teams.values()) {
-        if (!showAll && primaryEnterpriseId != null && team.enterprise_id !== primaryEnterpriseId) {
-            continue
-        }
-        const company =
-            team.enterprise_id != null
-                ? shareObjects.enterprises.get(team.enterprise_id) || ''
-                : ''
-        const row: ListTeamRow = {
-            team_uid: team.team_uid,
-            name: team.name,
-            company,
-            enterprise_id: team.enterprise_id,
-        }
-        if (pattern && !rowMatchesPattern(row, pattern)) continue
-        rows.push(row)
-    }
-
-    if (showMembers) {
-        await attachCommanderTeamMembers(auth, rows, options.veryVerbose === true)
-    }
-
-    sortCommanderRows(rows, options.sort || 'company')
-    return rows
-}
-
-async function listTeamsEnterprise(auth: Auth, options: ListTeamsOptions): Promise<ListTeamRow[]> {
     const columns = resolveColumns(options.columns)
     const includes = includesForColumns(columns)
     const wantsDisplayNames = columns.includes(TeamColumn.Node) || columns.includes(TeamColumn.Roles)
@@ -191,24 +131,6 @@ export function formatTeamsTable(
     rows: ListTeamRow[],
     options: FormatTeamsTableOptions = {}
 ): FormattedTeamsTable {
-    const style = options.style ?? (options.columns != null ? 'enterprise' : 'commander')
-    if (style === 'commander') {
-        const showMember = options.showMember === true
-        const headers = ['#', 'Company', 'Team UID', 'Name']
-        if (showMember) headers.push('Member')
-        const outRows = rows.map((row, rowIndex) => {
-            const cells = [
-                String(rowIndex + 1),
-                row.company ?? '',
-                row.team_uid,
-                row.name,
-            ]
-            if (showMember) cells.push(row.member ?? '')
-            return cells
-        })
-        return { headers, rows: outRows }
-    }
-
     const columns = resolveColumns(options.columns)
     const headers: string[] = ['#', 'Team UID', 'Name', ...columns.map((column) => HEADER_BY_COLUMN[column])]
 
@@ -307,58 +229,11 @@ function tokenize(text: string): string[] {
     return text.split(TOKEN_SEPARATOR_PATTERN).filter((token) => token.length > 0)
 }
 
-async function attachCommanderTeamMembers(
-    auth: Auth,
-    rows: ListTeamRow[],
-    fetchMissing: boolean
-): Promise<void> {
-    const enterpriseData = new EnterpriseDataManager(auth)
-    const response = await enterpriseData.getData([
-        EnterpriseDataInclude.TeamUsers,
-        EnterpriseDataInclude.Users,
-    ])
-    const teamUsers = buildTeamUserMap(response.team_users || [])
-    const usernameById = buildUserUsernameMap(response.users || [])
-
-    for (const row of rows) {
-        const ids = teamUsers.get(row.team_uid)
-        if (ids && ids.size > 0) {
-            row.member = resolveSortedNames(ids, usernameById).join('\n')
-            continue
-        }
-        if (!fetchMissing) continue
-        try {
-            const emails = await fetchTeamMemberEmails(auth, row.team_uid)
-            if (emails.length > 0) row.member = emails.join('\n')
-        } catch {
-            /* best-effort; leave member blank */
-        }
-    }
-}
-
-function sortCommanderRows(rows: ListTeamRow[], sort: ListTeamSort): void {
-    if (sort === 'team_uid') {
-        rows.sort((a, b) => a.team_uid.localeCompare(b.team_uid, undefined, { sensitivity: 'base' }))
-        return
-    }
-    if (sort === 'name') {
-        rows.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
-        return
-    }
-    rows.sort((a, b) => {
-        const companyCmp = (a.company || '').localeCompare(b.company || '', undefined, { sensitivity: 'base' })
-        if (companyCmp !== 0) return companyCmp
-        return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
-    })
-}
-
 function rowMatchesPattern(row: ListTeamRow, pattern: string): boolean {
     const lowered = pattern.toLowerCase()
     const tokens: string[] = []
     tokens.push(row.team_uid.toLowerCase())
     tokens.push(...tokenize(row.name.toLowerCase()))
-    if (row.company) tokens.push(...tokenize(row.company.toLowerCase()))
-    if (row.member) tokens.push(...tokenize(row.member.toLowerCase()))
     if (row.restricts) tokens.push(row.restricts.toLowerCase())
     if (row.node) tokens.push(...tokenize(row.node.toLowerCase()))
     if (row.user_count != null) tokens.push(String(row.user_count))

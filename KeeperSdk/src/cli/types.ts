@@ -8,10 +8,6 @@ import type { MkdirOptions } from '../folders/addFolder'
 import type { RenameFolderResult } from '../folders/updateFolder'
 import type { DeleteFolderResult } from '../folders/deleteFolder'
 import type { ListSharedFolderRow, ListSharedFoldersOptions } from '../sharedFolders/listSharedFolders'
-import type { ListTeamRow, ListTeamsOptions } from '../teams/listTeams'
-import type { TeamView } from '../teams/viewTeam'
-import type { ListUserRow, ListUsersOptions } from '../users/userTypes'
-import type { UserView } from '../users/userTypes'
 import type { RecordShareInfo } from '../sharing/Sharing'
 import type { VaultSummary } from '../vault/KeeperVault'
 
@@ -57,10 +53,6 @@ export type KeeperCliVault = {
     mkdir?: (path: string, options?: MkdirOptions) => Promise<{ folderUid: string; success: boolean; message?: string }>
     renameFolder?: (folderPath: string, newName: string) => Promise<RenameFolderResult>
     rmdir?: (patterns: string[], options?: { force?: boolean }) => Promise<DeleteFolderResult>
-    listTeams?: (options?: ListTeamsOptions) => Promise<ListTeamRow[]>
-    viewTeam?: (identifier: string) => Promise<TeamView>
-    listUsers?: (options?: ListUsersOptions) => Promise<ListUserRow[]>
-    viewUser?: (identifier: string) => Promise<UserView>
 }
 
 /** Host adapter (browser shell, Node script, tests). `readTextFile` is optional. */
