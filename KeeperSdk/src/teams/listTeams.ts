@@ -1,373 +1,574 @@
-import type { Auth } from '@keeper-security/keeperapi'
-import { isNumber, TOKEN_SEPARATOR_PATTERN } from '../utils'
+import type { Auth } from "@keeper-security/keeperapi";
+import { isNumber, TOKEN_SEPARATOR_PATTERN } from "../utils";
 import {
-    EnterpriseDataInclude,
-    EnterpriseDataManager,
-    type DecryptedRoleNames,
-    type EnterpriseDisplayNames,
-    type EnterpriseNode,
-    type EnterpriseRole,
-    type EnterpriseTeamRecord,
-    type EnterpriseTeamUserLink,
-    type EnterpriseUser,
-    type GetEnterpriseDataResponse,
-} from './enterpriseData'
+  EnterpriseDataInclude,
+  EnterpriseDataManager,
+  type DecryptedRoleNames,
+  type EnterpriseDisplayNames,
+  type EnterpriseNode,
+  type EnterpriseRole,
+  type EnterpriseTeamRecord,
+  type EnterpriseTeamUserLink,
+  type EnterpriseUser,
+  type GetEnterpriseDataResponse,
+} from "./enterpriseData";
+import {
+  fetchShareObjects,
+  fetchTeamMemberEmails,
+  resolvePrimaryEnterpriseId,
+} from "./shareTeams";
 
 export enum TeamColumn {
-    Restricts = 'restricts',
-    Node = 'node',
-    UserCount = 'user_count',
-    Users = 'users',
-    RoleCount = 'role_count',
-    Roles = 'roles',
+  Restricts = "restricts",
+  Node = "node",
+  UserCount = "user_count",
+  Users = "users",
+  RoleCount = "role_count",
+  Roles = "roles",
 }
 
-export type TeamColumnInput = TeamColumn | `${TeamColumn}`
+export type TeamColumnInput = TeamColumn | `${TeamColumn}`;
 
-export const SUPPORTED_TEAM_COLUMNS: readonly TeamColumn[] = Object.values(TeamColumn)
+export const SUPPORTED_TEAM_COLUMNS: readonly TeamColumn[] =
+  Object.values(TeamColumn);
 
 export const DEFAULT_TEAM_COLUMNS: readonly TeamColumn[] = [
-    TeamColumn.Restricts,
-    TeamColumn.Node,
-    TeamColumn.UserCount,
-    TeamColumn.RoleCount,
-]
+  TeamColumn.Restricts,
+  TeamColumn.Node,
+  TeamColumn.UserCount,
+  TeamColumn.RoleCount,
+];
 
-const NODE_PATH_SEPARATOR = '\\'
-const MIN_ASCII_COL_WIDTH = 2
-const ALL_COLUMNS_WILDCARD = '*'
+const NODE_PATH_SEPARATOR = "\\";
+const MIN_ASCII_COL_WIDTH = 2;
+const ALL_COLUMNS_WILDCARD = "*";
 
 const HEADER_BY_COLUMN: Record<TeamColumn, string> = {
-    [TeamColumn.Restricts]: 'Restricts',
-    [TeamColumn.Node]: 'Node',
-    [TeamColumn.UserCount]: 'User Count',
-    [TeamColumn.Users]: 'Users',
-    [TeamColumn.RoleCount]: 'Role Count',
-    [TeamColumn.Roles]: 'Roles',
-}
+  [TeamColumn.Restricts]: "Restricts",
+  [TeamColumn.Node]: "Node",
+  [TeamColumn.UserCount]: "User Count",
+  [TeamColumn.Users]: "Users",
+  [TeamColumn.RoleCount]: "Role Count",
+  [TeamColumn.Roles]: "Roles",
+};
+
+export type ListTeamSort = "company" | "team_uid" | "name";
 
 export type ListTeamsOptions = {
-    pattern?: string | null
-    columns?: TeamColumnInput[] | typeof ALL_COLUMNS_WILDCARD | string | null
-}
+  pattern?: string | null;
+  /** Show teams from all enterprises in contacts (Commander --all). Default: primary org only. */
+  all?: boolean;
+  /** Include Member column from enterprise cache (Commander -v). */
+  verbose?: boolean;
+  /** Fetch members via vault/get_team_members when not cached (Commander -vv). */
+  veryVerbose?: boolean;
+  sort?: ListTeamSort;
+  /** Enterprise admin detail columns; when set, uses get_enterprise_data instead of share objects. */
+  columns?: TeamColumnInput[] | typeof ALL_COLUMNS_WILDCARD | string | null;
+};
 
 export type ListTeamRow = {
-    team_uid: string
-    name: string
-    restricts?: string
-    node?: string
-    user_count?: number
-    users?: string[]
-    role_count?: number
-    roles?: string[]
-}
+  team_uid: string;
+  name: string;
+  company?: string;
+  enterprise_id?: number;
+  member?: string;
+  restricts?: string;
+  node?: string;
+  user_count?: number;
+  users?: string[];
+  role_count?: number;
+  roles?: string[];
+};
 
 export type FormattedTeamsTable = {
-    headers: string[]
-    rows: string[][]
-}
+  headers: string[];
+  rows: string[][];
+};
 
 export type FormatTeamsTableOptions = {
-    columns?: ListTeamsOptions['columns']
-}
+  columns?: ListTeamsOptions["columns"];
+  /** Commander -v / -vv: show Member column. */
+  showMember?: boolean;
+  style?: "commander" | "enterprise";
+};
 
 type DecorateContext = {
-    nodePaths: Map<number, string>
-    teamUsers: Map<string, Set<number>>
-    roleTeams: Map<string, Set<number>>
-    usernameById: Map<number, string>
-    roleNameById: Map<number, string>
-}
+  nodePaths: Map<number, string>;
+  teamUsers: Map<string, Set<number>>;
+  roleTeams: Map<string, Set<number>>;
+  usernameById: Map<number, string>;
+  roleNameById: Map<number, string>;
+};
 
 export function formatTeamRestricts(team: EnterpriseTeamRecord): string {
-    const r = team.restrict_view === true ? 'R ' : '  '
-    const w = team.restrict_edit === true ? 'W ' : '  '
-    const restrictShare = team.restrict_share === true || team.restrict_sharing === true
-    const s = restrictShare ? 'S' : ' '
-    return r + w + s
+  const r = team.restrict_view === true ? "R " : "  ";
+  const w = team.restrict_edit === true ? "W " : "  ";
+  const restrictShare =
+    team.restrict_share === true || team.restrict_sharing === true;
+  const s = restrictShare ? "S" : " ";
+  return r + w + s;
 }
 
-export async function listTeams(auth: Auth, options: ListTeamsOptions = {}): Promise<ListTeamRow[]> {
-    const columns = resolveColumns(options.columns)
-    const includes = includesForColumns(columns)
-    const wantsDisplayNames = columns.includes(TeamColumn.Node) || columns.includes(TeamColumn.Roles)
+export async function listTeams(
+  auth: Auth,
+  options: ListTeamsOptions = {},
+): Promise<ListTeamRow[]> {
+  if (options.columns != null) {
+    return listTeamsEnterprise(auth, options);
+  }
+  return listTeamsCommander(auth, options);
+}
 
-    const enterpriseData = new EnterpriseDataManager(auth)
-    const emptyDisplayNames: EnterpriseDisplayNames = { nodes: new Map(), roles: new Map() }
-    const [response, displayNames] = await Promise.all([
-        enterpriseData.getData(includes),
-        wantsDisplayNames ? enterpriseData.getDisplayNames() : Promise.resolve(emptyDisplayNames),
-    ])
+async function listTeamsCommander(
+  auth: Auth,
+  options: ListTeamsOptions,
+): Promise<ListTeamRow[]> {
+  const [shareObjects, primaryEnterpriseId] = await Promise.all([
+    fetchShareObjects(auth),
+    resolvePrimaryEnterpriseId(auth),
+  ]);
+  const showAll = options.all === true;
+  const pattern = options.pattern?.trim() || null;
+  const showMembers = options.verbose === true || options.veryVerbose === true;
 
-    const teams = response.teams || []
-    const nodes = response.nodes || []
-    applyDecryptedNodeNames(nodes, displayNames.nodes)
-
-    const context: DecorateContext = {
-        nodePaths: buildNodePathLookup(nodes),
-        teamUsers: buildTeamUserMap(response.team_users || []),
-        roleTeams: buildRoleTeamMap(response),
-        usernameById: buildUserUsernameMap(response.users || []),
-        roleNameById: buildRoleNameMap(response.roles || [], displayNames.roles),
+  const rows: ListTeamRow[] = [];
+  for (const team of shareObjects.teams.values()) {
+    if (
+      !showAll &&
+      primaryEnterpriseId != null &&
+      team.enterprise_id !== primaryEnterpriseId
+    ) {
+      continue;
     }
+    const company =
+      team.enterprise_id != null
+        ? shareObjects.enterprises.get(team.enterprise_id) || ""
+        : "";
+    const row: ListTeamRow = {
+      team_uid: team.team_uid,
+      name: team.name,
+      company,
+      enterprise_id: team.enterprise_id,
+    };
+    if (pattern && !rowMatchesPattern(row, pattern)) continue;
+    rows.push(row);
+  }
 
-    const pattern = options.pattern?.trim() || null
-    const rows: ListTeamRow[] = []
-    for (const team of teams) {
-        const row: ListTeamRow = {
-            team_uid: team.team_uid,
-            name: teamDisplayName(team),
-        }
-        decorateRow(row, team, columns, context)
-        if (pattern && !rowMatchesPattern(row, pattern)) continue
-        rows.push(row)
-    }
+  if (showMembers) {
+    await attachCommanderTeamMembers(auth, rows, options.veryVerbose === true);
+  }
 
-    rows.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
-    return rows
+  sortCommanderRows(rows, options.sort || "company");
+  return rows;
+}
+
+async function listTeamsEnterprise(
+  auth: Auth,
+  options: ListTeamsOptions,
+): Promise<ListTeamRow[]> {
+  const columns = resolveColumns(options.columns);
+  const includes = includesForColumns(columns);
+  const wantsDisplayNames =
+    columns.includes(TeamColumn.Node) || columns.includes(TeamColumn.Roles);
+
+  const enterpriseData = new EnterpriseDataManager(auth);
+  const emptyDisplayNames: EnterpriseDisplayNames = {
+    nodes: new Map(),
+    roles: new Map(),
+  };
+  const [response, displayNames] = await Promise.all([
+    enterpriseData.getData(includes),
+    wantsDisplayNames
+      ? enterpriseData.getDisplayNames()
+      : Promise.resolve(emptyDisplayNames),
+  ]);
+
+  const teams = response.teams || [];
+  const nodes = response.nodes || [];
+  applyDecryptedNodeNames(nodes, displayNames.nodes);
+
+  const context: DecorateContext = {
+    nodePaths: buildNodePathLookup(nodes),
+    teamUsers: buildTeamUserMap(response.team_users || []),
+    roleTeams: buildRoleTeamMap(response),
+    usernameById: buildUserUsernameMap(response.users || []),
+    roleNameById: buildRoleNameMap(response.roles || [], displayNames.roles),
+  };
+
+  const pattern = options.pattern?.trim() || null;
+  const rows: ListTeamRow[] = [];
+  for (const team of teams) {
+    const row: ListTeamRow = {
+      team_uid: team.team_uid,
+      name: teamDisplayName(team),
+    };
+    decorateRow(row, team, columns, context);
+    if (pattern && !rowMatchesPattern(row, pattern)) continue;
+    rows.push(row);
+  }
+
+  rows.sort((a, b) =>
+    a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),
+  );
+  return rows;
 }
 
 export function formatTeamsTable(
-    rows: ListTeamRow[],
-    options: FormatTeamsTableOptions = {}
+  rows: ListTeamRow[],
+  options: FormatTeamsTableOptions = {},
 ): FormattedTeamsTable {
-    const columns = resolveColumns(options.columns)
-    const headers: string[] = ['#', 'Team UID', 'Name', ...columns.map((column) => HEADER_BY_COLUMN[column])]
+  const style =
+    options.style ?? (options.columns != null ? "enterprise" : "commander");
+  if (style === "commander") {
+    const showMember = options.showMember === true;
+    const headers = ["#", "Company", "Team UID", "Name"];
+    if (showMember) headers.push("Member");
+    const outRows = rows.map((row, rowIndex) => {
+      const cells = [
+        String(rowIndex + 1),
+        row.company ?? "",
+        row.team_uid,
+        row.name,
+      ];
+      if (showMember) cells.push(row.member ?? "");
+      return cells;
+    });
+    return { headers, rows: outRows };
+  }
 
-    const outRows: string[][] = rows.map((row, rowIndex) => {
-        const cells: string[] = [String(rowIndex + 1), row.team_uid, row.name]
-        for (const column of columns) cells.push(formatCell(row, column))
-        return cells
-    })
+  const columns = resolveColumns(options.columns);
+  const headers: string[] = [
+    "#",
+    "Team UID",
+    "Name",
+    ...columns.map((column) => HEADER_BY_COLUMN[column]),
+  ];
 
-    return { headers, rows: outRows }
+  const outRows: string[][] = rows.map((row, rowIndex) => {
+    const cells: string[] = [String(rowIndex + 1), row.team_uid, row.name];
+    for (const column of columns) cells.push(formatCell(row, column));
+    return cells;
+  });
+
+  return { headers, rows: outRows };
 }
 
 export function renderTeamsAsciiTable(
-    table: FormattedTeamsTable,
-    options: { minColWidth?: number } = {}
+  table: FormattedTeamsTable,
+  options: { minColWidth?: number } = {},
 ): string {
-    const { minColWidth = MIN_ASCII_COL_WIDTH } = options
-    const { headers, rows } = table
-    const columnCount = headers.length
+  const { minColWidth = MIN_ASCII_COL_WIDTH } = options;
+  const { headers, rows } = table;
+  const columnCount = headers.length;
 
-    const expandedRows: string[][][] = rows.map((row) =>
-        row.map((cell) => (cell.includes('\n') ? cell.split('\n') : [cell]))
-    )
+  const expandedRows: string[][][] = rows.map((row) =>
+    row.map((cell) => (cell.includes("\n") ? cell.split("\n") : [cell])),
+  );
 
-    const columnWidths = new Array<number>(columnCount).fill(0)
+  const columnWidths = new Array<number>(columnCount).fill(0);
+  for (let columnIndex = 0; columnIndex < columnCount; columnIndex += 1) {
+    columnWidths[columnIndex] = Math.max(
+      headers[columnIndex].length,
+      minColWidth,
+    );
+  }
+  for (const row of expandedRows) {
     for (let columnIndex = 0; columnIndex < columnCount; columnIndex += 1) {
-        columnWidths[columnIndex] = Math.max(headers[columnIndex].length, minColWidth)
+      for (const line of row[columnIndex]) {
+        columnWidths[columnIndex] = Math.max(
+          columnWidths[columnIndex],
+          line.length,
+          minColWidth,
+        );
+      }
     }
-    for (const row of expandedRows) {
-        for (let columnIndex = 0; columnIndex < columnCount; columnIndex += 1) {
-            for (const line of row[columnIndex]) {
-                columnWidths[columnIndex] = Math.max(columnWidths[columnIndex], line.length, minColWidth)
-            }
-        }
+  }
+
+  const padCell = (cell: string, columnIndex: number): string =>
+    cell + " ".repeat(columnWidths[columnIndex] - cell.length);
+  const formatPhysicalRow = (cells: string[]): string =>
+    cells.map((cell, columnIndex) => padCell(cell, columnIndex)).join("  ");
+
+  const ruleRow = formatPhysicalRow(
+    columnWidths.map((width) => "-".repeat(width)),
+  );
+  const lines: string[] = [formatPhysicalRow(headers), ruleRow];
+
+  for (const row of expandedRows) {
+    const physicalLineCount = Math.max(...row.map((cell) => cell.length));
+    for (let lineIndex = 0; lineIndex < physicalLineCount; lineIndex += 1) {
+      const physicalCells: string[] = row.map((cell) => cell[lineIndex] ?? "");
+      lines.push(formatPhysicalRow(physicalCells));
     }
-
-    const padCell = (cell: string, columnIndex: number): string =>
-        cell + ' '.repeat(columnWidths[columnIndex] - cell.length)
-    const formatPhysicalRow = (cells: string[]): string =>
-        cells.map((cell, columnIndex) => padCell(cell, columnIndex)).join('  ')
-
-    const ruleRow = formatPhysicalRow(columnWidths.map((width) => '-'.repeat(width)))
-    const lines: string[] = [formatPhysicalRow(headers), ruleRow]
-
-    for (const row of expandedRows) {
-        const physicalLineCount = Math.max(...row.map((cell) => cell.length))
-        for (let lineIndex = 0; lineIndex < physicalLineCount; lineIndex += 1) {
-            const physicalCells: string[] = row.map((cell) => cell[lineIndex] ?? '')
-            lines.push(formatPhysicalRow(physicalCells))
-        }
-    }
-    return lines.join('\n')
+  }
+  return lines.join("\n");
 }
 
-function includesForColumns(columns: readonly TeamColumn[]): EnterpriseDataInclude[] {
-    const set = new Set<EnterpriseDataInclude>([EnterpriseDataInclude.Teams])
-    for (const column of columns) {
-        switch (column) {
-            case TeamColumn.Node:
-                set.add(EnterpriseDataInclude.Nodes)
-                break
-            case TeamColumn.UserCount:
-            case TeamColumn.Users:
-                set.add(EnterpriseDataInclude.TeamUsers)
-                if (column === TeamColumn.Users) set.add(EnterpriseDataInclude.Users)
-                break
-            case TeamColumn.RoleCount:
-            case TeamColumn.Roles:
-                set.add(EnterpriseDataInclude.RoleTeams)
-                if (column === TeamColumn.Roles) set.add(EnterpriseDataInclude.Roles)
-                break
-        }
+function includesForColumns(
+  columns: readonly TeamColumn[],
+): EnterpriseDataInclude[] {
+  const set = new Set<EnterpriseDataInclude>([EnterpriseDataInclude.Teams]);
+  for (const column of columns) {
+    switch (column) {
+      case TeamColumn.Node:
+        set.add(EnterpriseDataInclude.Nodes);
+        break;
+      case TeamColumn.UserCount:
+      case TeamColumn.Users:
+        set.add(EnterpriseDataInclude.TeamUsers);
+        if (column === TeamColumn.Users) set.add(EnterpriseDataInclude.Users);
+        break;
+      case TeamColumn.RoleCount:
+      case TeamColumn.Roles:
+        set.add(EnterpriseDataInclude.RoleTeams);
+        if (column === TeamColumn.Roles) set.add(EnterpriseDataInclude.Roles);
+        break;
     }
-    return Array.from(set)
+  }
+  return Array.from(set);
 }
 
-function resolveColumns(input: ListTeamsOptions['columns']): TeamColumn[] {
-    if (input == null) return [...DEFAULT_TEAM_COLUMNS]
-    if (input === ALL_COLUMNS_WILDCARD) return [...SUPPORTED_TEAM_COLUMNS]
+function resolveColumns(input: ListTeamsOptions["columns"]): TeamColumn[] {
+  if (input == null) return [...DEFAULT_TEAM_COLUMNS];
+  if (input === ALL_COLUMNS_WILDCARD) return [...SUPPORTED_TEAM_COLUMNS];
 
-    const requested = Array.isArray(input) ? input : input.split(',').map((part) => part.trim())
-    const allowed = new Set<string>(SUPPORTED_TEAM_COLUMNS)
-    const seen = new Set<TeamColumn>()
-    for (const column of requested) {
-        if (column && allowed.has(column)) seen.add(column as TeamColumn)
-    }
-    if (seen.size === 0) return [...DEFAULT_TEAM_COLUMNS]
-    return SUPPORTED_TEAM_COLUMNS.filter((column) => seen.has(column))
+  const requested = Array.isArray(input)
+    ? input
+    : input.split(",").map((part) => part.trim());
+  const allowed = new Set<string>(SUPPORTED_TEAM_COLUMNS);
+  const seen = new Set<TeamColumn>();
+  for (const column of requested) {
+    if (column && allowed.has(column)) seen.add(column as TeamColumn);
+  }
+  if (seen.size === 0) return [...DEFAULT_TEAM_COLUMNS];
+  return SUPPORTED_TEAM_COLUMNS.filter((column) => seen.has(column));
 }
 
 function teamDisplayName(team: { name?: string; team_uid: string }): string {
-    return (team.name || team.team_uid || '').trim() || team.team_uid
+  return (team.name || team.team_uid || "").trim() || team.team_uid;
 }
 
 function tokenize(text: string): string[] {
-    return text.split(TOKEN_SEPARATOR_PATTERN).filter((token) => token.length > 0)
+  return text
+    .split(TOKEN_SEPARATOR_PATTERN)
+    .filter((token) => token.length > 0);
+}
+
+async function attachCommanderTeamMembers(
+  auth: Auth,
+  rows: ListTeamRow[],
+  fetchMissing: boolean,
+): Promise<void> {
+  const enterpriseData = new EnterpriseDataManager(auth);
+  const response = await enterpriseData.getData([
+    EnterpriseDataInclude.TeamUsers,
+    EnterpriseDataInclude.Users,
+  ]);
+  const teamUsers = buildTeamUserMap(response.team_users || []);
+  const usernameById = buildUserUsernameMap(response.users || []);
+
+  for (const row of rows) {
+    const ids = teamUsers.get(row.team_uid);
+    if (ids && ids.size > 0) {
+      row.member = resolveSortedNames(ids, usernameById).join("\n");
+      continue;
+    }
+    if (!fetchMissing) continue;
+    try {
+      const emails = await fetchTeamMemberEmails(auth, row.team_uid);
+      if (emails.length > 0) row.member = emails.join("\n");
+    } catch {
+      /* best-effort; leave member blank */
+    }
+  }
+}
+
+function sortCommanderRows(rows: ListTeamRow[], sort: ListTeamSort): void {
+  if (sort === "team_uid") {
+    rows.sort((a, b) =>
+      a.team_uid.localeCompare(b.team_uid, undefined, { sensitivity: "base" }),
+    );
+    return;
+  }
+  if (sort === "name") {
+    rows.sort((a, b) =>
+      a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),
+    );
+    return;
+  }
+  rows.sort((a, b) => {
+    const companyCmp = (a.company || "").localeCompare(
+      b.company || "",
+      undefined,
+      { sensitivity: "base" },
+    );
+    if (companyCmp !== 0) return companyCmp;
+    return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
+  });
 }
 
 function rowMatchesPattern(row: ListTeamRow, pattern: string): boolean {
-    const lowered = pattern.toLowerCase()
-    const tokens: string[] = []
-    tokens.push(row.team_uid.toLowerCase())
-    tokens.push(...tokenize(row.name.toLowerCase()))
-    if (row.restricts) tokens.push(row.restricts.toLowerCase())
-    if (row.node) tokens.push(...tokenize(row.node.toLowerCase()))
-    if (row.user_count != null) tokens.push(String(row.user_count))
-    if (row.role_count != null) tokens.push(String(row.role_count))
-    for (const list of [row.users, row.roles]) {
-        if (!list) continue
-        for (const value of list) tokens.push(...tokenize(value.toLowerCase()))
-    }
-    return tokens.some((token) => token.includes(lowered))
+  const lowered = pattern.toLowerCase();
+  const tokens: string[] = [];
+  tokens.push(row.team_uid.toLowerCase());
+  tokens.push(...tokenize(row.name.toLowerCase()));
+  if (row.company) tokens.push(...tokenize(row.company.toLowerCase()));
+  if (row.member) tokens.push(...tokenize(row.member.toLowerCase()));
+  if (row.restricts) tokens.push(row.restricts.toLowerCase());
+  if (row.node) tokens.push(...tokenize(row.node.toLowerCase()));
+  if (row.user_count != null) tokens.push(String(row.user_count));
+  if (row.role_count != null) tokens.push(String(row.role_count));
+  for (const list of [row.users, row.roles]) {
+    if (!list) continue;
+    for (const value of list) tokens.push(...tokenize(value.toLowerCase()));
+  }
+  return tokens.some((token) => token.includes(lowered));
 }
 
-function applyDecryptedNodeNames(nodes: EnterpriseNode[], decrypted: Map<number, string>): void {
-    if (decrypted.size === 0) return
-    for (const node of nodes) {
-        const display = decrypted.get(node.node_id)
-        if (display) node.displayName = display
-    }
+function applyDecryptedNodeNames(
+  nodes: EnterpriseNode[],
+  decrypted: Map<number, string>,
+): void {
+  if (decrypted.size === 0) return;
+  for (const node of nodes) {
+    const display = decrypted.get(node.node_id);
+    if (display) node.displayName = display;
+  }
 }
 
 function buildNodePathLookup(nodes: EnterpriseNode[]): Map<number, string> {
-    return new Map(
-        nodes.map((node) => [
-            node.node_id,
-            EnterpriseDataManager.getNodePath(nodes, node.node_id, { separator: NODE_PATH_SEPARATOR }),
-        ])
-    )
+  return new Map(
+    nodes.map((node) => [
+      node.node_id,
+      EnterpriseDataManager.getNodePath(nodes, node.node_id, {
+        separator: NODE_PATH_SEPARATOR,
+      }),
+    ]),
+  );
 }
 
-function buildTeamUserMap(links: EnterpriseTeamUserLink[]): Map<string, Set<number>> {
-    const byTeam = new Map<string, Set<number>>()
-    for (const link of links) {
-        if (!link.team_uid) continue
-        const set = byTeam.get(link.team_uid)
-        if (set) set.add(link.enterprise_user_id)
-        else byTeam.set(link.team_uid, new Set([link.enterprise_user_id]))
-    }
-    return byTeam
+function buildTeamUserMap(
+  links: EnterpriseTeamUserLink[],
+): Map<string, Set<number>> {
+  const byTeam = new Map<string, Set<number>>();
+  for (const link of links) {
+    if (!link.team_uid) continue;
+    const set = byTeam.get(link.team_uid);
+    if (set) set.add(link.enterprise_user_id);
+    else byTeam.set(link.team_uid, new Set([link.enterprise_user_id]));
+  }
+  return byTeam;
 }
 
-function buildRoleTeamMap(response: GetEnterpriseDataResponse): Map<string, Set<number>> {
-    const map = new Map<string, Set<number>>()
-    for (const link of response.role_teams || []) {
-        if (!link.team_uid) continue
-        const set = map.get(link.team_uid)
-        if (set) set.add(link.role_id)
-        else map.set(link.team_uid, new Set([link.role_id]))
-    }
-    return map
+function buildRoleTeamMap(
+  response: GetEnterpriseDataResponse,
+): Map<string, Set<number>> {
+  const map = new Map<string, Set<number>>();
+  for (const link of response.role_teams || []) {
+    if (!link.team_uid) continue;
+    const set = map.get(link.team_uid);
+    if (set) set.add(link.role_id);
+    else map.set(link.team_uid, new Set([link.role_id]));
+  }
+  return map;
 }
 
 function buildUserUsernameMap(users: EnterpriseUser[]): Map<number, string> {
-    const map = new Map<number, string>()
-    for (const user of users) {
-        if (isNumber(user.enterprise_user_id ) && user.username) {
-            map.set(user.enterprise_user_id, user.username)
-        }
+  const map = new Map<number, string>();
+  for (const user of users) {
+    if (isNumber(user.enterprise_user_id) && user.username) {
+      map.set(user.enterprise_user_id, user.username);
     }
-    return map
+  }
+  return map;
 }
 
-function buildRoleNameMap(roles: EnterpriseRole[], decrypted: DecryptedRoleNames): Map<number, string> {
-    const map = new Map<number, string>()
-    for (const role of roles) {
-        if (isNumber(role.role_id)) continue
-        const display = (role.displayName || decrypted.get(role.role_id) || '').trim()
-        map.set(role.role_id, display || String(role.role_id))
-    }
-    return map
+function buildRoleNameMap(
+  roles: EnterpriseRole[],
+  decrypted: DecryptedRoleNames,
+): Map<number, string> {
+  const map = new Map<number, string>();
+  for (const role of roles) {
+    if (isNumber(role.role_id)) continue;
+    const display = (
+      role.displayName ||
+      decrypted.get(role.role_id) ||
+      ""
+    ).trim();
+    map.set(role.role_id, display || String(role.role_id));
+  }
+  return map;
 }
 
-function resolveSortedNames(ids: Set<number>, nameById: Map<number, string>): string[] {
-    const result: string[] = []
-    for (const id of ids) {
-        const name = nameById.get(id)
-        if (name) result.push(name)
-    }
-    result.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))
-    return result
+function resolveSortedNames(
+  ids: Set<number>,
+  nameById: Map<number, string>,
+): string[] {
+  const result: string[] = [];
+  for (const id of ids) {
+    const name = nameById.get(id);
+    if (name) result.push(name);
+  }
+  result.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+  return result;
 }
 
 function decorateRow(
-    row: ListTeamRow,
-    team: EnterpriseTeamRecord,
-    columns: readonly TeamColumn[],
-    context: DecorateContext
+  row: ListTeamRow,
+  team: EnterpriseTeamRecord,
+  columns: readonly TeamColumn[],
+  context: DecorateContext,
 ): void {
-    const { nodePaths, teamUsers, roleTeams, usernameById, roleNameById } = context
+  const { nodePaths, teamUsers, roleTeams, usernameById, roleNameById } =
+    context;
 
-    for (const column of columns) {
-        switch (column) {
-            case TeamColumn.Restricts:
-                row.restricts = formatTeamRestricts(team)
-                break
-            case TeamColumn.Node:
-                row.node = nodePaths.get(team.node_id) || ''
-                break
-            case TeamColumn.UserCount:
-                row.user_count = teamUsers.get(team.team_uid)?.size ?? 0
-                break
-            case TeamColumn.Users: {
-                const ids = teamUsers.get(team.team_uid)
-                row.users = ids ? resolveSortedNames(ids, usernameById) : []
-                break
-            }
-            case TeamColumn.RoleCount:
-                row.role_count = roleTeams.get(team.team_uid)?.size ?? 0
-                break
-            case TeamColumn.Roles: {
-                const ids = roleTeams.get(team.team_uid)
-                row.roles = ids ? resolveSortedNames(ids, roleNameById) : []
-                break
-            }
-        }
+  for (const column of columns) {
+    switch (column) {
+      case TeamColumn.Restricts:
+        row.restricts = formatTeamRestricts(team);
+        break;
+      case TeamColumn.Node:
+        row.node = nodePaths.get(team.node_id) || "";
+        break;
+      case TeamColumn.UserCount:
+        row.user_count = teamUsers.get(team.team_uid)?.size ?? 0;
+        break;
+      case TeamColumn.Users: {
+        const ids = teamUsers.get(team.team_uid);
+        row.users = ids ? resolveSortedNames(ids, usernameById) : [];
+        break;
+      }
+      case TeamColumn.RoleCount:
+        row.role_count = roleTeams.get(team.team_uid)?.size ?? 0;
+        break;
+      case TeamColumn.Roles: {
+        const ids = roleTeams.get(team.team_uid);
+        row.roles = ids ? resolveSortedNames(ids, roleNameById) : [];
+        break;
+      }
     }
+  }
 }
 
 function formatListCell(values: string[] | undefined): string {
-    if (!values || values.length === 0) return ''
-    return values.join('\n')
+  if (!values || values.length === 0) return "";
+  return values.join("\n");
 }
 
 function formatCell(row: ListTeamRow, column: TeamColumn): string {
-    switch (column) {
-        case TeamColumn.Restricts:
-            return row.restricts ?? ''
-        case TeamColumn.Node:
-            return row.node ?? ''
-        case TeamColumn.UserCount:
-            return row.user_count == null ? '' : String(row.user_count)
-        case TeamColumn.Users:
-            return formatListCell(row.users)
-        case TeamColumn.RoleCount:
-            return row.role_count == null ? '' : String(row.role_count)
-        case TeamColumn.Roles:
-            return formatListCell(row.roles)
-    }
+  switch (column) {
+    case TeamColumn.Restricts:
+      return row.restricts ?? "";
+    case TeamColumn.Node:
+      return row.node ?? "";
+    case TeamColumn.UserCount:
+      return row.user_count == null ? "" : String(row.user_count);
+    case TeamColumn.Users:
+      return formatListCell(row.users);
+    case TeamColumn.RoleCount:
+      return row.role_count == null ? "" : String(row.role_count);
+    case TeamColumn.Roles:
+      return formatListCell(row.roles);
+  }
 }
