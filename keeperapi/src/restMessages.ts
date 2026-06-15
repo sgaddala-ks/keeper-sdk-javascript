@@ -561,22 +561,12 @@ export const getEnterprisePublicKeyMessage = (): RestOutMessage<BreachWatch.IEnt
 export const getShareObjectsMessage = (
     data: Records.IGetShareObjectsRequest = {}
 ): RestMessage<Records.IGetShareObjectsRequest, Records.IGetShareObjectsResponse> =>
-    createMessage(
-        data,
-        'vault/get_share_objects',
-        Records.GetShareObjectsRequest,
-        Records.GetShareObjectsResponse
-    )
+    createMessage(data, 'vault/get_share_objects', Records.GetShareObjectsRequest, Records.GetShareObjectsResponse)
 
 export const getTeamMembersMessage = (
     data: Enterprise.IGetTeamMemberRequest
 ): RestMessage<Enterprise.IGetTeamMemberRequest, Enterprise.IGetTeamMemberResponse> =>
-    createMessage(
-        data,
-        'vault/get_team_members',
-        Enterprise.GetTeamMemberRequest,
-        Enterprise.GetTeamMemberResponse
-    )
+    createMessage(data, 'vault/get_team_members', Enterprise.GetTeamMemberRequest, Enterprise.GetTeamMemberResponse)
 
 export const getEnterpriseDataForUserMessage = (
     data: Enterprise.IEnterpriseDataRequest
