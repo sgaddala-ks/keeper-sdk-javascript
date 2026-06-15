@@ -181,46 +181,6 @@ export type { AuthProvider, SharedFolderPermissionsInput } from './folders/Folde
 
 export { SharedFolderManager } from './sharedFolders/SharedFolderManager'
 
-export {
-    dispatchCliLine,
-    dispatchKeeperCli,
-    ensureKeeperCliRegistry,
-    registerCliCommand,
-    registerCliAlias,
-    getCliCommand,
-    listCliCommands,
-    listCliCommandNames,
-    listCliCommandNamesForLoginState,
-    listCliCommandsForLoginState,
-    isAuthCliCommand,
-    listDocumentedCommands,
-    getDetailedHelpPage,
-    formatDetailedHelpForCommand,
-    tokenizeArguments,
-    parseCliArgs,
-    wantsCliHelp,
-    rejectUnknownOptions,
-    loginWithCredentials,
-    loginWithSessionToken,
-    runLoginCommand,
-    runLogoutCommand,
-    KeeperCliParser,
-    createKeeperCliParser,
-    getKeeperCliPromptPrefix,
-    BUILTIN_CLI_COMMANDS,
-    registerBuiltinCliCommands,
-    listCommand,
-} from './cli'
-export type { KeeperCliParserOptions } from './cli'
-export type {
-    CliResult,
-    ParsedCli,
-    CliCommandDefinition,
-    CliHelpDoc,
-    KeeperCliHost,
-    KeeperCliVault,
-} from './cli'
-
 export { Auth, KeeperEnvironment, syncDown, Authentication } from '@keeper-security/keeperapi'
 
 export type {
