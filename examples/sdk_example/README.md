@@ -42,22 +42,31 @@ These commands are registered in `KeeperSdk/src/cli` and run via `dispatchCliLin
 
 | Command | Aliases | Description |
 |---------|---------|-------------|
-| `logout` | — | End session |
+| `logout` | - | End session |
 | `sync` | `syncdown`, `sync-down`, `d` | Sync vault from Keeper |
-| `whoami` | — | Current user and vault counts |
+| `whoami` | - | Current user and vault counts |
 | `list` | `l` | All records (table) |
 | `search` | `s` | Search records by text |
 | `get` | `g` | Record or folder details |
-| `ls` | — | List folder contents |
-| `cd` | — | Change current folder |
-| `tree` | — | Folder tree |
-| `mkdir` | — | Create folder (`-sf` for shared folder) |
+| `ls` | - | List folder contents |
+| `cd` | - | Change current folder |
+| `tree` | - | Folder tree |
+| `mkdir` | - | Create folder (`-sf` for shared folder) |
 | `list-sf` | `lsf` | List shared folders |
-| `vault summary` | — | Vault counts |
+| `vault summary` | - | Vault counts |
 
-Write operations (add/update/delete records, share, rename folder, …) are **SDK API only** — use the npm scripts below, not shell commands.
+Write operations (add/update/delete records, share, rename folder, -) are **SDK API only** - use the npm scripts below, not shell commands.
 
-### Shell CLI examples
+### Finding records and folders
+
+| Goal | Shell command |
+|------|----------------|
+| Record by UID | `get <record-uid>` |
+| Record by title / text | `search gmail` or `get "Gmail Login"` |
+| Shared folder | `get <sf-uid>` or `list-sf <pattern>` |
+| Folder navigation | `ls`, `cd`, `tree`, `mkdir` |
+
+Use **`get`** for exact UID lookup. Use **`search`** for text in titles and fields (not teams or users).
 
 ```bash
 # Restore session then list records (dispatchCliLine path)
@@ -131,7 +140,7 @@ Most examples log in via persistent login or prompt for credentials.
 **Restore-session on `records:list`:**
 
 ```bash
-npm run records:list -- --restore-session --from-json /path/to/session.json [--host keepersecurity.eu] [--no-sync]
+npm run records:list -- --restore-session --from-json /path/to/session.json --host keepersecurity.eu --no-sync
 ```
 
-If Node shell CLI works but the browser shell fails, suspect host I/O (`readTextFile` / Vite `/@fs`), CORS, or region — not `KeeperVault.restoreSession` itself.
+If Node shell CLI works but the browser shell fails, suspect host I/O (`readTextFile` / Vite `/@fs`), CORS, or region - not `KeeperVault.restoreSession` itself.

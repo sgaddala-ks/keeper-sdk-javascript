@@ -209,7 +209,6 @@ export function getRecordUrl(record: DRecord): string | undefined {
     return getRecordSummary(record).url
 }
 
-/** Commander-style list description (login @ url for most record types). */
 export function getRecordDescription(record: DRecord): string {
     if (record.version === 6) return 'PAM Configuration'
 
@@ -220,7 +219,6 @@ export function getRecordDescription(record: DRecord): string {
     return parts.length > 0 ? parts.join(' @ ') : ''
 }
 
-/** Commander list column: Nested Share / Keeper Drive vs classic vault records. */
 export function getRecordCategory(record: DRecord): 'Classic' | 'Nested' {
     return record.isKeeperDriveData ? 'Nested' : 'Classic'
 }
@@ -228,11 +226,20 @@ export function getRecordCategory(record: DRecord): 'Classic' | 'Nested' {
 const wordCache = new WeakMap<DRecord, string[]>()
 
 export function searchRecords(records: DRecord[], criteria: string): DRecord[] {
-    if (!criteria.trim()) return records
+    const trimmed = criteria.trim()
+    if (!trimmed) return records
 
-    const searchWords = criteria.toLowerCase().split(/\s+/)
+    const searchWords = trimmed
+        .toLowerCase()
+        .split(/\s+/)
+        .filter((w) => w.length > 0)
 
     return records.filter((record) => {
+        const uidLower = record.uid?.toLowerCase() ?? ''
+        if (uidLower && searchWords.every((sw) => uidLower.includes(sw))) {
+            return true
+        }
+
         let words = wordCache.get(record)
         if (!words) {
             words = collectRecordWords(record)
@@ -262,7 +269,7 @@ function collectRecordWords(record: DRecord): string[] {
         }
     }
 
-    words.push(record.uid)
+    words.push(record.uid.toLowerCase())
     return words
 }
 

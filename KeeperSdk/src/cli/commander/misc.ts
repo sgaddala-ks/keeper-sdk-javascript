@@ -125,8 +125,10 @@ export const searchCommand: CliCommandDefinition = {
     help: {
         title: 'search — find records (Keeper Commander)',
         synopsis: 'usage: search <terms...>',
-        description: '  Space-separated terms; all terms must match somewhere in the record.',
-        examples: '  search amazon\n  search bank account',
+        description:
+            '  Space-separated terms; all terms must match somewhere in the record (title, fields, or UID).\n' +
+            '  For exact lookup by UID, use get <uid> instead.',
+        examples: '  search amazon\n  search bank account\n  get zhJdqy7lb_zIEeCJT7GLlQ',
         seeAlso: '  get, ls',
     },
     async run(host, parsed) {

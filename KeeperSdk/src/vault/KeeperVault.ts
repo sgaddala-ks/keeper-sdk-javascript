@@ -442,7 +442,10 @@ export class KeeperVault {
     }
 
     public getRecordByUid(uid: string): DRecord | undefined {
-        return this.storage.getByUid<DRecord>(VaultObjectKind.Record, uid)
+        const direct = this.storage.getByUid<DRecord>(VaultObjectKind.Record, uid)
+        if (direct) return direct
+        const lower = uid.toLowerCase()
+        return this.getRecords().find((record) => record.uid?.toLowerCase() === lower)
     }
 
     public findRecord(uidOrTitle: string): DRecord | undefined {

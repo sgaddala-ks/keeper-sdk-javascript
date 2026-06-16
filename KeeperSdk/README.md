@@ -54,6 +54,20 @@ The package includes a Commander-style CLI (`dispatchCliLine`, `createKeeperCliP
 
 Every command supports `--help`. Record/folder write operations (`add`, `update`, `delete`, `share`, …) are SDK-only — see the examples below.
 
+### Finding records and folders
+
+| Goal | Command |
+|------|---------|
+| Record by UID (exact) | `get <record-uid>` |
+| Record by title | `get "Gmail Login"` or `search gmail` |
+| Text in title/fields | `search <terms…>` (all terms must match) |
+| Shared folder by UID | `get <sf-uid>` or `list-sf <pattern>` |
+| Folder by path/UID | `get <folder-uid>`, `ls`, `cd`, `tree` |
+| All records (table) | `list` or `list --verbose` |
+| Account summary | `whoami` or `vault summary` |
+
+`search` only covers **vault records** (title, fields, UID). It does not search teams or enterprise users — use the SDK API (`vault.viewTeam`, `vault.listTeams`, …) or `examples/sdk_example` scripts for those.
+
 ```typescript
 import { dispatchCliLine, type KeeperCliHost } from '@keeper-security/keeper-sdk-javascript'
 

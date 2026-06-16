@@ -14,8 +14,9 @@ export const getCommand: CliCommandDefinition = {
         title: 'get — record/folder details (Keeper Commander)',
         synopsis: 'usage: get [--unmask] [--format {detail,json,password,fields}] uid',
         description:
-            '  Resolves a vault object by UID or title. Records support all output formats; folders support detail/json.',
-        arguments: '  uid    Record or folder UID or title.',
+            '  Resolves a vault object by UID or title. Records support all output formats; folders and shared folders support detail/json.\n' +
+            '  Prefer get for exact UID lookup; search is for text in titles and fields.',
+        arguments: '  uid    Record, folder, or shared-folder UID or title.',
         options: `  --format {detail,json,password,fields}
                  detail (default): human-readable output.
                  json: JSON object.
